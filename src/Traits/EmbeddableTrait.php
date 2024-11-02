@@ -3,20 +3,18 @@
 namespace Subhendu\Recommender\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
-use Subhendu\Recommender\Services\EmbeddingService;
 use Pgvector\Laravel\Vector;
+use Subhendu\Recommender\Services\EmbeddingService;
 
 trait EmbeddableTrait
 {
-
     public function getEmbedding(): Vector
     {
-       return $this->{$this->getEmbeddingColumnName()};
+        return $this->{$this->getEmbeddingColumnName()};
     }
 
     /**
      * Generates the embedding and stores it in the configured vector storage.
-     *
      */
     public function refreshEmbedding(): void
     {
@@ -35,5 +33,4 @@ trait EmbeddableTrait
     {
         return $this->query();
     }
-
 }

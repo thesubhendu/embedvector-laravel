@@ -6,8 +6,8 @@ use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Subhendu\Recommender\Models\EmbeddingBatch;
 use Pgvector\Laravel\Vector;
+use Subhendu\Recommender\Models\EmbeddingBatch;
 
 readonly class ProcessCompletedBatchService
 {
@@ -16,7 +16,7 @@ readonly class ProcessCompletedBatchService
     public function __construct(
     ) {
         $this->disk = Storage::disk('local');
-//        $this->disk->deleteDirectory(self::outputFileDirectory, true);
+        //        $this->disk->deleteDirectory(self::outputFileDirectory, true);
     }
 
     public function process(EmbeddingBatch $batch): void
@@ -34,7 +34,7 @@ readonly class ProcessCompletedBatchService
                 $data = json_decode($line, true);
                 $embeddingArray = $data['response']['body']['data'][0]['embedding'] ?? null;
 
-                if (!$embeddingArray) {
+                if (! $embeddingArray) {
                     continue;
                 }
                 $embeddingVector = new Vector($embeddingArray);
@@ -59,7 +59,7 @@ readonly class ProcessCompletedBatchService
 
             fclose($handle);
         } else {
-            throw new Exception("Unable to open the file.");
+            throw new Exception('Unable to open the file.');
         }
     }
 
@@ -67,5 +67,4 @@ readonly class ProcessCompletedBatchService
     {
         DB::connection('pgsql')->table($tableName)->insert($embeddingsBatch);
     }
-
 }

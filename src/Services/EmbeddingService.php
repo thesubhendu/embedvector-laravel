@@ -3,11 +3,12 @@
 namespace Subhendu\Recommender\Services;
 
 use OpenAI;
+
 class EmbeddingService
 {
     private OpenAI\Client $openai;
 
-    public string $embeddingModel='text-embedding-3-small';
+    public string $embeddingModel = 'text-embedding-3-small';
 
     public function __construct()
     {
@@ -20,12 +21,10 @@ class EmbeddingService
         return $this->openai;
     }
 
-
     /**
-     * @param string $text
      * @return array<int,float>
      */
-    public function generateEmbedding(string $text) : array
+    public function generateEmbedding(string $text): array
     {
         $response = $this->openai->embeddings()->create([
             'model' => $this->embeddingModel,

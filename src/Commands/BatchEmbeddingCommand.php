@@ -14,7 +14,7 @@ class BatchEmbeddingCommand extends Command
      * @var string
      */
     protected $signature = 'embedding:batch {modelName}';
-//    protected $signature = 'embedding:batch {--chunk=5}';
+    //    protected $signature = 'embedding:batch {--chunk=5}';
 
     /**
      * The console command description.
@@ -22,6 +22,7 @@ class BatchEmbeddingCommand extends Command
      * @var string
      */
     protected $description = 'Generate a JSONL file for batch embedding of JobVerified models';
+
     private $disk;
 
     public function __construct()
@@ -29,7 +30,6 @@ class BatchEmbeddingCommand extends Command
         parent::__construct();
         $this->disk = Storage::disk('local');
     }
-
 
     /**
      * Execute the console command.
@@ -39,7 +39,7 @@ class BatchEmbeddingCommand extends Command
         $modelClass = $this->argument('modelName');
 
         $batchEmbeddingService = app(BatchEmbeddingService::class, [
-            'embeddableModelName' => $modelClass
+            'embeddableModelName' => $modelClass,
         ]);
 
         $batchEmbeddingService->generateJsonLFile(500);
@@ -48,19 +48,18 @@ class BatchEmbeddingCommand extends Command
 
         try {
             $files = $this->disk->files($batchEmbeddingService::inputFileDirectory);
-            $this->info("Files found: " . json_encode($files));
+            $this->info('Files found: '.json_encode($files));
 
             foreach ($files as $file) {
                 $response = $batchEmbeddingService->uploadFileForBatchEmbedding($this->disk->path($file));
 
-                $this->info("File uploaded successfully for batch embedding. batch created!");
-                $this->info("File ID: " . $response->id);
-                $this->info("Array Response: " . json_encode($response->toArray()));
+                $this->info('File uploaded successfully for batch embedding. batch created!');
+                $this->info('File ID: '.$response->id);
+                $this->info('Array Response: '.json_encode($response->toArray()));
             }
         } catch (\Exception $e) {
-            $this->error("Error occurred while uploading file for batch embedding: " . $e->getMessage());
+            $this->error('Error occurred while uploading file for batch embedding: '.$e->getMessage());
         }
 
     }
-
 }

@@ -11,7 +11,9 @@ use Subhendu\Recommender\Services\ProcessCompletedBatchService;
 class ProcessCompletedEmbeddingsCommand extends Command
 {
     protected $signature = 'process-completed-batch';
+
     public const outputFileDirectory = 'embeddings/output';
+
     protected $description = 'Process Completed Batches';
 
     public function __construct(
@@ -19,7 +21,6 @@ class ProcessCompletedEmbeddingsCommand extends Command
     ) {
         parent::__construct();
     }
-
 
     /**
      * Execute the console command.
@@ -31,8 +32,9 @@ class ProcessCompletedEmbeddingsCommand extends Command
         foreach ($batchesToCheck as $batch) {
             $response = $this->embeddingService->getClient()->batches()->retrieve(id: $batch->batch_id);
 
-            if (!$response->status) {
+            if (! $response->status) {
                 $this->info('no status found skipping the batch', $batch->id);
+
                 continue;
             }
 
@@ -43,7 +45,7 @@ class ProcessCompletedEmbeddingsCommand extends Command
                 $filePath = $batch->saved_file_path;
                 $this->info('File already exist', Storage::disk('local')->path($filePath));
 
-                if (!$filePath) {
+                if (! $filePath) {
                     $filePath = $this->downloadAndSaveFile($batch, $response->outputFileId);
                     $this->info('File Downloaded and saved', Storage::disk('local')->path($filePath));
                 }
@@ -59,7 +61,7 @@ class ProcessCompletedEmbeddingsCommand extends Command
 
     private function downloadAndSaveFile(EmbeddingBatch $batch, string $outputFileId): string
     {
-        $filePath = self::outputFileDirectory . '/output_embeddings_' . $batch->id . '.jsonl';
+        $filePath = self::outputFileDirectory.'/output_embeddings_'.$batch->id.'.jsonl';
 
         Storage::disk('local')->put($filePath, $this->embeddingService->getClient()->files()->download($outputFileId));
 
@@ -70,5 +72,4 @@ class ProcessCompletedEmbeddingsCommand extends Command
 
         return $filePath;
     }
-
 }

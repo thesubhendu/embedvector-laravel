@@ -6,7 +6,6 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Subhendu\Recommender\Commands\BatchEmbeddingCommand;
 use Subhendu\Recommender\Commands\ProcessCompletedEmbeddingsCommand;
-use Subhendu\Recommender\Commands\RecommenderCommand;
 
 class RecommenderServiceProvider extends PackageServiceProvider
 {

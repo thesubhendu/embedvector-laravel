@@ -21,10 +21,11 @@ readonly class ProcessCompletedBatchService
 
     public function process(EmbeddingBatch $batch): void
     {
-        $embeddingStorageModel = app($batch->embeddable_model)->embeddingStorage();
+        $embeddingStorageModel = app($batch->embeddable_model);
         $embeddingStorageTableName = $embeddingStorageModel->getTable();
         $embeddingColumnName = $embeddingStorageModel->getEmbeddingColumnName();
         $handle = fopen($this->disk->path($batch->saved_file_path), 'r');
+
 
         if ($handle) {
             $batchSize = 500;
@@ -37,11 +38,11 @@ readonly class ProcessCompletedBatchService
                 if (!$embeddingArray) {
                     continue;
                 }
-                $embeddingVector = new Vector($embeddingArray);
+                $embeddingVector = new Vector($embeddingArray); // todo check if this is necessary
 
                 if ($data) {
                     $embeddingsBatch[] = [
-                        'model_id' => $data['custom_id'],
+                        $embeddingStorageModel->keyName() => $data['custom_id'],
                         $embeddingColumnName => $embeddingVector->__toString(), // Store embedding as JSONB or text
                     ];
 
@@ -58,6 +59,11 @@ readonly class ProcessCompletedBatchService
             }
 
             fclose($handle);
+
+            // delete file
+//            $this->disk->delete($batch->saved_file_path);
+            $batch->status = 'archived'; // done processing now save for reference only
+            $batch->save();
         } else {
             throw new Exception("Unable to open the file.");
         }
@@ -65,7 +71,8 @@ readonly class ProcessCompletedBatchService
 
     private function insertBatchIntoDatabase(string $tableName, array $embeddingsBatch): void
     {
-        DB::connection('pgsql')->table($tableName)->insert($embeddingsBatch);
+        // todo upsert it, for that make sure there is unique constraint on model_id column
+        DB::connection('pgsql')->table($tableName)->upsert($embeddingsBatch, ['id'], ['embedding']);
     }
 
 }

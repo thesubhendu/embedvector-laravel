@@ -13,7 +13,7 @@ class BatchEmbeddingCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'embedding:batch {modelName}';
+    protected $signature = 'embedding:batch {modelName} {--type=sync} ';
 //    protected $signature = 'embedding:batch {--chunk=5}';
 
     /**
@@ -37,17 +37,30 @@ class BatchEmbeddingCommand extends Command
     public function handle(): void
     {
         $modelClass = $this->argument('modelName');
+        $type = $this->option('type');
+
 
         $batchEmbeddingService = app(BatchEmbeddingService::class, [
-            'embeddableModelName' => $modelClass
+            'embeddableModelName' => $modelClass,
+            'type'=> $type
         ]);
+
+        $files = $this->disk->files($batchEmbeddingService->uploadFilesDir);
+
+        // todo uncomment once ready to publish
+//        if (count($files) > 0) {
+//            $confirm =$this->confirm('There are already files in the directory. Are you sure want to overwrite them');
+//            if (!$confirm) {
+//                $this->info('File generation skipped');
+//                return;
+//            }
+//        }
 
         $batchEmbeddingService->generateJsonLFile(500);
 
         $this->info('file generated success');
 
         try {
-            $files = $this->disk->files($batchEmbeddingService::inputFileDirectory);
             $this->info("Files found: " . json_encode($files));
 
             foreach ($files as $file) {

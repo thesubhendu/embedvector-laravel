@@ -33,4 +33,6 @@ interface EmbeddableContract
     public function refreshEmbedding(): void;
 
     public function itemsToEmbed():Builder;
+
+    public function itemsToSync():Builder;
 }

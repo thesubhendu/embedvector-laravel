@@ -15,28 +15,29 @@ readonly class BatchEmbeddingService
 
     private const lotSize = 50000; // it is limit, create folder and files to it in chunk of 50k each file
     public const inputFileDirectory = 'embeddings/input';  // using storage local disk , input file that will be uploaded to openAI
+    public string $uploadFilesDir;
 
     public function __construct(
         string $embeddableModelName,
         private EmbeddingService $embeddingService,
-        private EmbeddingBatch $embeddingBatchModel
+        private EmbeddingBatch $embeddingBatchModel,
+        public string $type  // init or sync
     )
     {
         $this->disk = Storage::disk('local');
         $this->embeddableModel = app($embeddableModelName);
-
-        $this->disk->deleteDirectory(self::inputFileDirectory);
+        $this->uploadFilesDir = self::inputFileDirectory.'/'.class_basename($this->embeddableModel);
     }
 
     public function itemsToEmbedQuery(): Builder
     {
-        // todo handle efficiently using chunks
-//        $existingEmbeddedJobs = $this->embeddableModel->embeddingStorage()->query()->pluck('model_id')->toArray();
+        if($this->type == 'init') {
+            return $this->embeddableModel->itemsToEmbed();
+        }
+        // by default always sync
 
-        return $this->embeddableModel->itemsToEmbed()
-//            ->whereNotIn($this->embeddableModel->getKeyName(), $existingEmbeddedJobs)
-//            ->whereIn($this->embeddableModel->getKeyName(), [11, 12, 13, 14, 15, 16, 17, 18, 19, 10]) // todo remove hardcoded ids
-            ;
+        return   $this->embeddableModel->itemsToSync();
+
     }
 
     public function uploadFileForBatchEmbedding(string $fileToEmbed)
@@ -49,6 +50,9 @@ readonly class BatchEmbeddingService
                 'file' => fopen($fileToEmbed, 'r'),
             ]
         );
+
+        //after upload success delete file
+        unlink($fileToEmbed);
 
         $fileId = $fileResponse->id;
 
@@ -71,7 +75,7 @@ readonly class BatchEmbeddingService
 
     private function getInputFileName($uniqueId = 1): string
     {
-        return self::inputFileDirectory . "/embeddings_{$uniqueId}.jsonl";
+        return $this->uploadFilesDir . "/embeddings_{$uniqueId}.jsonl";
     }
 
     /**

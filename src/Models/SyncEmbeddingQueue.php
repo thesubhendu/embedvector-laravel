@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class SyncEmbeddingQueue extends Model
 {
-
     protected $connection = 'pgsql';
 
     protected $guarded = [];
@@ -17,5 +16,4 @@ class SyncEmbeddingQueue extends Model
     {
         return self::query()->firstOrCreate(['model_id' => $model->id, 'model_type' => get_class($model)]);
     }
-
 }

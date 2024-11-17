@@ -26,7 +26,6 @@ readonly class ProcessCompletedBatchService
         $embeddingColumnName = $embeddingStorageModel->getEmbeddingColumnName();
         $handle = fopen($this->disk->path($batch->saved_file_path), 'r');
 
-
         if ($handle) {
             $batchSize = 500;
             $embeddingsBatch = [];
@@ -61,7 +60,7 @@ readonly class ProcessCompletedBatchService
             fclose($handle);
 
             // delete file
-//            $this->disk->delete($batch->saved_file_path);
+            //            $this->disk->delete($batch->saved_file_path);
             $batch->status = 'archived'; // done processing now save for reference only
             $batch->save();
         } else {

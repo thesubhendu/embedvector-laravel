@@ -14,7 +14,7 @@ class BatchEmbeddingCommand extends Command
      * @var string
      */
     protected $signature = 'embedding:batch {modelName} {--type=sync} ';
-//    protected $signature = 'embedding:batch {--chunk=5}';
+    //    protected $signature = 'embedding:batch {--chunk=5}';
 
     /**
      * The console command description.
@@ -22,6 +22,7 @@ class BatchEmbeddingCommand extends Command
      * @var string
      */
     protected $description = 'Generate a JSONL file for batch embedding of JobVerified models';
+
     private $disk;
 
     public function __construct()
@@ -29,7 +30,6 @@ class BatchEmbeddingCommand extends Command
         parent::__construct();
         $this->disk = Storage::disk('local');
     }
-
 
     /**
      * Execute the console command.
@@ -39,41 +39,39 @@ class BatchEmbeddingCommand extends Command
         $modelClass = $this->argument('modelName');
         $type = $this->option('type');
 
-
         $batchEmbeddingService = app(BatchEmbeddingService::class, [
             'embeddableModelName' => $modelClass,
-            'type'=> $type
+            'type' => $type,
         ]);
 
         $files = $this->disk->files($batchEmbeddingService->uploadFilesDir);
 
         // todo uncomment once ready to publish
-//        if (count($files) > 0) {
-//            $confirm =$this->confirm('There are already files in the directory. Are you sure want to overwrite them');
-//            if (!$confirm) {
-//                $this->info('File generation skipped');
-//                return;
-//            }
-//        }
+        //        if (count($files) > 0) {
+        //            $confirm =$this->confirm('There are already files in the directory. Are you sure want to overwrite them');
+        //            if (!$confirm) {
+        //                $this->info('File generation skipped');
+        //                return;
+        //            }
+        //        }
 
         $batchEmbeddingService->generateJsonLFile(500);
 
         $this->info('file generated success');
 
         try {
-            $this->info("Files found: " . json_encode($files));
+            $this->info('Files found: '.json_encode($files));
 
             foreach ($files as $file) {
                 $response = $batchEmbeddingService->uploadFileForBatchEmbedding($this->disk->path($file));
 
-                $this->info("File uploaded successfully for batch embedding. batch created!");
-                $this->info("File ID: " . $response->id);
-                $this->info("Array Response: " . json_encode($response->toArray()));
+                $this->info('File uploaded successfully for batch embedding. batch created!');
+                $this->info('File ID: '.$response->id);
+                $this->info('Array Response: '.json_encode($response->toArray()));
             }
         } catch (\Exception $e) {
-            $this->error("Error occurred while uploading file for batch embedding: " . $e->getMessage());
+            $this->error('Error occurred while uploading file for batch embedding: '.$e->getMessage());
         }
 
     }
-
 }

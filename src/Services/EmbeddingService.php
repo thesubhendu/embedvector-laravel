@@ -20,5 +20,4 @@ class EmbeddingService
     {
         return $this->openai;
     }
-
 }

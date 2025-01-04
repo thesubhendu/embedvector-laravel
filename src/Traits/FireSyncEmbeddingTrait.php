@@ -1,4 +1,5 @@
 <?php
+
 namespace Subhendu\Recommender\Traits;
 
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ trait FireSyncEmbeddingTrait
         });
     }
 
-    private static function getFieldsToCheck(Model $model):array
+    private static function getFieldsToCheck(Model $model): array
     {
         $map = config('recommender.model_fields_to_check');
 
@@ -35,7 +36,7 @@ trait FireSyncEmbeddingTrait
                 return true;
             }
         }
+
         return false;
     }
-
 }

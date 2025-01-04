@@ -23,15 +23,15 @@ interface EmbeddableContract
 
     /**
      * Gives matching $targetModelClass for the Model
-     * @param string $targetModelClass Example. To search for Jobs for the customer Jobs are targetClass
-     * @param int $topK number of top results
+     *
+     * @param  string  $targetModelClass  Example. To search for Jobs for the customer Jobs are targetClass
+     * @param  int  $topK  number of top results
      * @return Collection<int, EmbeddableContract>
      */
-    public function matchingResults(string $targetModelClass, int $topK=5): Collection;
+    public function matchingResults(string $targetModelClass, int $topK = 5): Collection;
 
     /**
      * custom id that is added to the embedding file for upload, this id is used to identify the model while processing the result file from openai
-     * @return string
      */
-    public function getCustomId():string;
+    public function getCustomId(): string;
 }

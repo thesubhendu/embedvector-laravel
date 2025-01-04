@@ -9,15 +9,14 @@ use Subhendu\Recommender\Contracts\EmbeddableContract;
 
 trait EmbeddableTrait
 {
-
     public function getEmbeddingColumnName(): string
     {
         return 'embedding';
     }
 
-    public function getCustomId():string
+    public function getCustomId(): string
     {
-        return (string)$this->getKey();
+        return (string) $this->getKey();
     }
 
     public function queryForEmbedding(): Builder
@@ -34,8 +33,8 @@ trait EmbeddableTrait
     {
         $targetModel = app($targetModelClass);
 
-        if (!$targetModel instanceof EmbeddableContract) {
-            throw new \InvalidArgumentException("Target model must implement EmbeddableContract");
+        if (! $targetModel instanceof EmbeddableContract) {
+            throw new \InvalidArgumentException('Target model must implement EmbeddableContract');
         }
 
         return $targetModel->query()
@@ -43,7 +42,7 @@ trait EmbeddableTrait
                 $targetModel->getEmbeddingColumnName(),
                 $this->{$this->getEmbeddingColumnName()},
                 Distance::L2
-              )
+            )
             ->take($topK)
             ->get();
     }

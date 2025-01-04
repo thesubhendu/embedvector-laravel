@@ -15,14 +15,16 @@ readonly class BatchEmbeddingService
     private Filesystem $disk;
 
     private const lotSize = 50000; // it is limit, create folder and files to it in chunk of 50k each file
+
     public const inputFileDirectory = 'embeddings/input';  // using storage local disk , input file that will be uploaded to openAI
+
     public string $uploadFilesDir;
 
     public function __construct(
         string $embeddableModelName,
         private EmbeddingService $embeddingService,
         private EmbeddingBatch $embeddingBatchModel,
-        public string $type='sync'  // init or sync
+        public string $type = 'sync'  // init or sync
     ) {
         $this->disk = Storage::disk('local');
         $this->embeddableModel = app($embeddableModelName);

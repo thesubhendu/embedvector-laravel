@@ -8,7 +8,6 @@ use Subhendu\Recommender\Services\BatchEmbeddingService;
 
 class BatchEmbeddingCommand extends Command
 {
-
     protected $signature = 'embedding:batch {modelName} {--type=sync} {--force}';
 
     protected $description = 'Generate a JSONL file for batch embedding of JobVerified models';
@@ -37,10 +36,10 @@ class BatchEmbeddingCommand extends Command
 
         $files = $this->disk->files($batchEmbeddingService->uploadFilesDir);
 
-        if(count($files) > 0 && !$force) {
+        if (count($files) > 0 && ! $force) {
             $ans = $this->confirm('There are un uploaded files, would you like to overwrite?');
 
-            if(!$ans) {
+            if (! $ans) {
                 return;
             }
             $this->info('Overwriting Files');
@@ -52,15 +51,15 @@ class BatchEmbeddingCommand extends Command
 
         try {
             if (count($files) < 1) {
-                $this->info("No Files generated to upload, This user may have already been initialized");
-            }else {
-                $this->info("Files found: " . json_encode($files));
+                $this->info('No Files generated to upload, This user may have already been initialized');
+            } else {
+                $this->info('Files found: '.json_encode($files));
             }
 
             foreach ($files as $file) {
                 $batchEmbeddingService->uploadFileForBatchEmbedding($this->disk->path($file));
 
-                $this->info("File uploaded and batch created successfully! We will process it soon.");
+                $this->info('File uploaded and batch created successfully! We will process it soon.');
             }
         } catch (\Exception $e) {
             $this->error('Error occurred while uploading file for batch embedding: '.$e->getMessage());

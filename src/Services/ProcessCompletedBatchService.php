@@ -7,6 +7,7 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Pgvector\Laravel\Vector;
+use Subhendu\Recommender\Contracts\EmbeddableContract;
 use Subhendu\Recommender\Models\EmbeddingBatch;
 
 readonly class ProcessCompletedBatchService
@@ -16,14 +17,12 @@ readonly class ProcessCompletedBatchService
     public function __construct(
     ) {
         $this->disk = Storage::disk('local');
-        //        $this->disk->deleteDirectory(self::outputFileDirectory, true);
     }
 
     public function process(EmbeddingBatch $batch): void
     {
-        $embeddingStorageModel = app($batch->embeddable_model);
-        $embeddingStorageTableName = $embeddingStorageModel->getTable();
-        $embeddingColumnName = $embeddingStorageModel->getEmbeddingColumnName();
+        $embeddableModel = app($batch->embeddable_model);
+        $embeddingColumnName = $embeddableModel->getEmbeddingColumnName();
         $handle = fopen($this->disk->path($batch->saved_file_path), 'r');
 
         if ($handle) {
@@ -41,12 +40,12 @@ readonly class ProcessCompletedBatchService
 
                 if ($data) {
                     $embeddingsBatch[] = [
-                        $embeddingStorageModel->keyName() => $data['custom_id'],
+                        $embeddableModel->keyName() => $data['custom_id'], // todo see if this can be customized too, or recruiter_id is necessary like for bude case
                         $embeddingColumnName => $embeddingVector->__toString(), // Store embedding as JSONB or text
                     ];
 
                     if (count($embeddingsBatch) >= $batchSize) {
-                        $this->insertBatchIntoDatabase($embeddingStorageTableName, $embeddingsBatch);
+                        $this->insertBatchIntoDatabase($embeddableModel, $embeddingsBatch);
                         $embeddingsBatch = []; // Clear the batch after insertion
                     }
                 }
@@ -54,23 +53,24 @@ readonly class ProcessCompletedBatchService
 
             // Insert any remaining embeddings after the loop finishes
             if (count($embeddingsBatch) > 0) {
-                $this->insertBatchIntoDatabase($embeddingStorageTableName, $embeddingsBatch);
+                $this->insertBatchIntoDatabase($embeddableModel, $embeddingsBatch);
             }
 
             fclose($handle);
 
-            // delete file
-            //            $this->disk->delete($batch->saved_file_path);
             $batch->status = 'archived'; // done processing now save for reference only
             $batch->save();
+            $this->disk->delete($batch->saved_file_path);
         } else {
             throw new Exception('Unable to open the file.');
         }
     }
 
-    private function insertBatchIntoDatabase(string $tableName, array $embeddingsBatch): void
+    private function insertBatchIntoDatabase(EmbeddableContract $embeddableModel, array $embeddingsBatch): void
     {
+        $tableName = $embeddableModel->getTable();
+
         // todo upsert it, for that make sure there is unique constraint on model_id column
-        DB::connection('pgsql')->table($tableName)->upsert($embeddingsBatch, ['id'], ['embedding']);
+        DB::connection('pgsql')->table($tableName)->upsert($embeddingsBatch, [$embeddableModel->getKeyName()], [$embeddableModel->getEmbeddingColumnName()]);
     }
 }

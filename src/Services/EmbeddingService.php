@@ -21,16 +21,4 @@ class EmbeddingService
         return $this->openai;
     }
 
-    /**
-     * @return array<int,float>
-     */
-    public function generateEmbedding(string $text): array
-    {
-        $response = $this->openai->embeddings()->create([
-            'model' => $this->embeddingModel,
-            'input' => $text,
-        ]);
-
-        return $response->embeddings[0]->embedding;
-    }
 }

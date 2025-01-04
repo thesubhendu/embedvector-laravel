@@ -14,6 +14,6 @@ class SyncEmbeddingQueue extends Model
 
     public static function pushToQueue(Model $model)
     {
-        return self::query()->firstOrCreate(['model_id' => $model->id, 'model_type' => get_class($model)]);
+        return self::query()->firstOrCreate(['model_id' => $model->getKey(), 'model_type' => get_class($model)]);
     }
 }

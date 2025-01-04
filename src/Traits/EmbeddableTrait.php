@@ -3,42 +3,48 @@
 namespace Subhendu\Recommender\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
-use Pgvector\Laravel\Vector;
-use Subhendu\Recommender\Models\SyncEmbeddingQueue;
-use Subhendu\Recommender\Services\EmbeddingService;
+use Illuminate\Support\Collection;
+use Pgvector\Laravel\Distance;
+use Subhendu\Recommender\Contracts\EmbeddableContract;
 
 trait EmbeddableTrait
 {
-    public function getEmbedding(): Vector
-    {
-        return $this->{$this->getEmbeddingColumnName()};
-    }
-
-    /**
-     * Generates the embedding and stores it in the configured vector storage.
-     */
-    public function refreshEmbedding(): void
-    {
-        $embedding = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
-
-        $this->{$this->getEmbeddingColumnName()} = new Vector($embedding);
-        $this->save();
-    }
 
     public function getEmbeddingColumnName(): string
     {
         return 'embedding';
     }
 
-    public function itemsToEmbed(): Builder
+    public function getCustomId():string
+    {
+        return (string)$this->getKey();
+    }
+
+    public function queryForEmbedding(): Builder
     {
         return $this->query();
     }
 
-    public function itemsToSync(): Builder
+    public function queryForSyncing(): Builder
     {
-        $modelIds = SyncEmbeddingQueue::where('model_type', get_class($this))->pluck('model_id');
+        return $this->query()->where('embedding_sync_required', true);
+    }
 
-        return $this->query()->whereIn($this->getKeyName(), $modelIds);
+    public function matchingResults(string $targetModelClass, int $topK = 5): Collection
+    {
+        $targetModel = app($targetModelClass);
+
+        if (!$targetModel instanceof EmbeddableContract) {
+            throw new \InvalidArgumentException("Target model must implement EmbeddableContract");
+        }
+
+        return $targetModel->query()
+            ->nearestNeighbors(
+                $targetModel->getEmbeddingColumnName(),
+                $this->{$this->getEmbeddingColumnName()},
+                Distance::L2
+              )
+            ->take($topK)
+            ->get();
     }
 }

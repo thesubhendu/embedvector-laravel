@@ -15,30 +15,29 @@ readonly class BatchEmbeddingService
     private Filesystem $disk;
 
     private const lotSize = 50000; // it is limit, create folder and files to it in chunk of 50k each file
-
     public const inputFileDirectory = 'embeddings/input';  // using storage local disk , input file that will be uploaded to openAI
-
     public string $uploadFilesDir;
 
     public function __construct(
         string $embeddableModelName,
         private EmbeddingService $embeddingService,
         private EmbeddingBatch $embeddingBatchModel,
-        public string $type  // init or sync
+        public string $type='sync'  // init or sync
     ) {
         $this->disk = Storage::disk('local');
         $this->embeddableModel = app($embeddableModelName);
-        $this->uploadFilesDir = self::inputFileDirectory.'/'.class_basename($this->embeddableModel);
+
+        $this->uploadFilesDir = self::inputFileDirectory.'/'.class_basename($this->embeddableModel).'/'.$type;
     }
 
     public function itemsToEmbedQuery(): Builder
     {
         if ($this->type == 'init') {
-            return $this->embeddableModel->itemsToEmbed();
+            return $this->embeddableModel->queryForEmbedding();
         }
         // by default always sync
 
-        return $this->embeddableModel->itemsToSync();
+        return $this->embeddableModel->queryForSyncing();
 
     }
 
@@ -52,9 +51,6 @@ readonly class BatchEmbeddingService
                 'file' => fopen($fileToEmbed, 'r'),
             ]
         );
-
-        //after upload success delete file
-        unlink($fileToEmbed);
 
         $fileId = $fileResponse->id;
 
@@ -70,7 +66,10 @@ readonly class BatchEmbeddingService
             'batch_id' => $response->id,  // The batch ID from OpenAI
             'input_file_id' => $fileId, // open ai file id on uploaded file
             'embeddable_model' => get_class($this->embeddableModel),
+            'status' => 'validating',
         ]);
+
+        unlink($fileToEmbed);
 
         return $response;
     }
@@ -116,16 +115,14 @@ readonly class BatchEmbeddingService
 
     private function generateJsonLine(EmbeddableContract $model): string
     {
-        $text = $model->toEmbeddingText();
         $data = [
-            'custom_id' => (string) $model->getKey(),
+            'custom_id' => $model->getCustomId(),
             'method' => 'POST',
             'url' => '/v1/embeddings',
             'body' => [
                 'model' => $this->embeddingService->embeddingModel,
-                'input' => $text,
+                'input' => $model->toEmbeddingText(),
             ],
-
         ];
 
         return json_encode($data, JSON_UNESCAPED_UNICODE);

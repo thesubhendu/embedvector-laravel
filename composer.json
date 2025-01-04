@@ -79,7 +79,6 @@
                 "Subhendu\\Recommender\\RecommenderServiceProvider"
             ],
             "aliases": {
-                "Recommender": "Subhendu\\Recommender\\Facades\\Recommender"
             }
         }
     },

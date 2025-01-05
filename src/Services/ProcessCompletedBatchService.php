@@ -70,14 +70,14 @@ readonly class ProcessCompletedBatchService
     {
 
         $tableName = $embeddableModel->getTable();
-//        dd($tableName, $embeddableModel->getKeyName(), $embeddableModel->getEmbeddingColumnName());
+        //        dd($tableName, $embeddableModel->getKeyName(), $embeddableModel->getEmbeddingColumnName());
         $embeddingColumnName = $embeddableModel->getEmbeddingColumnName();
         foreach ($embeddingsBatch as $embedding) {
             $model = $embeddableModel->find($embedding['id']);
             $model->forceFill([$embeddingColumnName => $embedding[$embeddingColumnName]])->save();
         }
-// todo store in separate table for performance
+        // todo store in separate table for performance
         // todo upsert it, for that make sure there is unique constraint on model_id column
-//        DB::table($tableName)->upsert($embeddingsBatch, [$embeddableModel->getKeyName()], [$embeddableModel->getEmbeddingColumnName()]);
+        //        DB::table($tableName)->upsert($embeddingsBatch, [$embeddableModel->getKeyName()], [$embeddableModel->getEmbeddingColumnName()]);
     }
 }

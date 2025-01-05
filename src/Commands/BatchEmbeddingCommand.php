@@ -48,6 +48,7 @@ class BatchEmbeddingCommand extends Command
         $batchEmbeddingService->generateJsonLFile(8000);
 
         $this->info('file generated success');
+        $files = $this->disk->files($batchEmbeddingService->uploadFilesDir);
 
         try {
             if (count($files) < 1) {

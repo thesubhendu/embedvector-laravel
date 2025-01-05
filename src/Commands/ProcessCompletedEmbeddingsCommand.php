@@ -41,24 +41,22 @@ class ProcessCompletedEmbeddingsCommand extends Command
 
             if (! $response->status) {
                 $this->info('no status found skipping the batch '.$batch->id);
-
                 continue;
             }
 
+            $this->info('Current Status: ' . $response->status);
+
             if ($response->status == 'completed') {
-                $this->info('Completed Batch Found now Processing '.$batch->id);
-                $filePath = $batch->saved_file_path;
-                $this->info('File already exist '.Storage::disk('local')->path($filePath));
 
-                if (! $filePath) {
-                    $filePath = $this->downloadAndSaveFile($batch, $response->outputFileId);
-                    $this->info('File Downloaded and saved '.Storage::disk('local')->path($filePath));
-                }
+                $this->info('Completed Batch Found -> '.$batch->id);
+                $this->info('Downloading Result File');
+                $filePath = $this->downloadAndSaveFile($batch, $response->outputFileId);
 
-                $this->info('Started Processing '.$batch->id);
+                $this->info('File Downloaded and saved at ' . $filePath);
+
+                $this->info('Started Processing batch id: '. $batch->id);
 
                 $completedBatchService->process($batch);
-                $this->info('All batches processed');
 
             } else {
                 // update latest status of batch

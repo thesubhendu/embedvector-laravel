@@ -40,7 +40,7 @@ readonly class ProcessCompletedBatchService
 
                 if ($data) {
                     $embeddingsBatch[] = [
-                        $embeddableModel->keyName() => $data['custom_id'], // todo see if this can be customized too, or recruiter_id is necessary like for bude case
+                        $embeddableModel->getKeyName() => $data['custom_id'], // todo see if this can be customized too, or recruiter_id is necessary like for bude case
                         $embeddingColumnName => $embeddingVector->__toString(), // Store embedding as JSONB or text
                     ];
 
@@ -68,9 +68,16 @@ readonly class ProcessCompletedBatchService
 
     private function insertBatchIntoDatabase(EmbeddableContract $embeddableModel, array $embeddingsBatch): void
     {
-        $tableName = $embeddableModel->getTable();
 
+        $tableName = $embeddableModel->getTable();
+//        dd($tableName, $embeddableModel->getKeyName(), $embeddableModel->getEmbeddingColumnName());
+        $embeddingColumnName = $embeddableModel->getEmbeddingColumnName();
+        foreach ($embeddingsBatch as $embedding) {
+            $model = $embeddableModel->find($embedding['id']);
+            $model->forceFill([$embeddingColumnName => $embedding[$embeddingColumnName]])->save();
+        }
+// todo store in separate table for performance
         // todo upsert it, for that make sure there is unique constraint on model_id column
-        DB::connection('pgsql')->table($tableName)->upsert($embeddingsBatch, [$embeddableModel->getKeyName()], [$embeddableModel->getEmbeddingColumnName()]);
+//        DB::table($tableName)->upsert($embeddingsBatch, [$embeddableModel->getKeyName()], [$embeddableModel->getEmbeddingColumnName()]);
     }
 }

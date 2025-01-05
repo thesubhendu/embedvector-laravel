@@ -68,6 +68,6 @@ readonly class ProcessCompletedBatchService
 
     private function insertBatchIntoDatabase(EmbeddableContract $embeddableModel, array $embeddingsBatch): void
     {
-        DB::table('embeddings')->upsert($embeddingsBatch, ['model_id','model_type'], ['embedding']);
+        DB::table('embeddings')->upsert($embeddingsBatch, ['model_id', 'model_type'], ['embedding']);
     }
 }

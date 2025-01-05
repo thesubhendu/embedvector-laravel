@@ -25,13 +25,12 @@ trait EmbeddableTrait
     {
         $tableName = $this->getTable();
         $customersWithSyncRequiredEmbeddings = $this->query()
-            ->join('embeddings', function($join) use($tableName) {
+            ->join('embeddings', function ($join) use ($tableName) {
                 $join->on($tableName.'.id', '=', 'embeddings.model_id')
                     ->where('embeddings.model_type', '=', get_class($this));
             })
             ->where('embeddings.embedding_sync_required', true)
-            ->select($tableName.'.*')
-            ;
+            ->select($tableName.'.*');
 
         return $customersWithSyncRequiredEmbeddings;
     }

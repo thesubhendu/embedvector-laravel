@@ -19,9 +19,9 @@ class RecommenderServiceProvider extends PackageServiceProvider
         $package
             ->name('recommender')
             ->hasConfigFile()
-            ->hasViews()
+//            ->hasViews()
             ->hasMigration('2024_10_24_095247_create_embedding_batches_table')
-            ->hasMigration('2024_10_24_095248_create_sync_embedding_queue_table')
+            ->hasMigration('2025_01_05_090159_create_embeddings_table')
             ->hasCommands([BatchEmbeddingCommand::class, ProcessCompletedEmbeddingsCommand::class]);
     }
 }

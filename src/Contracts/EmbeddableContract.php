@@ -15,8 +15,6 @@ interface EmbeddableContract
      */
     public function toEmbeddingText(): string;
 
-    public function getEmbeddingColumnName(): string;
-
     public function queryForEmbedding(): Builder;
 
     public function queryForSyncing(): Builder;

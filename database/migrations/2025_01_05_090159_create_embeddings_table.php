@@ -6,18 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    protected $connection = 'pgsql';
-
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('sync_embedding_queues', function (Blueprint $table) {
+        Schema::create('embeddings', function (Blueprint $table) {
             $table->id();
+            $table->vector('embedding', 1536); // Dimensionality; 1536 for OpenAI's ada-002
             $table->morphs('model');
+            $table->unique(['model_id', 'model_type'], 'embeddings_model_id_model_type_unique');
+            $table->boolean('embedding_sync_required')->default(false);
             $table->timestamps();
-
         });
     }
 
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sync_embedding_queues');
+        Schema::dropIfExists('embeddings');
     }
 };

@@ -4,16 +4,13 @@ namespace Subhendu\Recommender\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Pgvector\Laravel\Distance;
 use Subhendu\Recommender\Contracts\EmbeddableContract;
+use Subhendu\Recommender\Models\Embedding;
 
 trait EmbeddableTrait
 {
-    public function getEmbeddingColumnName(): string
-    {
-        return 'embedding';
-    }
-
     public function getCustomId(): string
     {
         return (string) $this->getKey();
@@ -26,7 +23,17 @@ trait EmbeddableTrait
 
     public function queryForSyncing(): Builder
     {
-        return $this->query()->where('embedding_sync_required', true);
+        $tableName = $this->getTable();
+        $customersWithSyncRequiredEmbeddings = $this->query()
+            ->join('embeddings', function($join) use($tableName) {
+                $join->on($tableName.'.id', '=', 'embeddings.model_id')
+                    ->where('embeddings.model_type', '=', get_class($this));
+            })
+            ->where('embeddings.embedding_sync_required', true)
+            ->select($tableName.'.*')
+            ;
+
+        return $customersWithSyncRequiredEmbeddings;
     }
 
     public function matchingResults(string $targetModelClass, int $topK = 5): Collection
@@ -37,13 +44,21 @@ trait EmbeddableTrait
             throw new \InvalidArgumentException('Target model must implement EmbeddableContract');
         }
 
-        return $targetModel->query()
+        $embeddingsValue = DB::table('embeddings')
+            ->where('model_id', $this->getKey())
+            ->where('model_type', get_class($this))
+            ->value('embedding');
+
+        $matchingResultIds = Embedding::query()
             ->nearestNeighbors(
-                $targetModel->getEmbeddingColumnName(),
-                $this->{$this->getEmbeddingColumnName()},
+                'embedding',
+                $embeddingsValue,
                 Distance::L2
             )
+            ->where('model_type', '=', $targetModelClass)
             ->take($topK)
-            ->get();
+            ->pluck('model_id');
+
+        return $targetModel->whereIn($targetModel->getKeyName(), $matchingResultIds)->get();
     }
 }

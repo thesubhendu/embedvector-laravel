@@ -3,7 +3,7 @@
 namespace Subhendu\Recommender\Traits;
 
 use Illuminate\Database\Eloquent\Model;
-use Subhendu\Recommender\Models\SyncEmbeddingQueue;
+use Subhendu\Recommender\Models\Embedding;
 
 trait FireSyncEmbeddingTrait
 {
@@ -11,7 +11,9 @@ trait FireSyncEmbeddingTrait
     {
         static::saved(function (Model $model) {
             if (static::canFireEvent($model)) {
-                SyncEmbeddingQueue::pushToQueue($model);
+                Embedding::where('model_id', $model->getKey())
+                    ->where('model_type', get_class($model))
+                    ->update(['embedding_sync_required' => true]);
             }
         });
     }

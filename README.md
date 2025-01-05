@@ -51,9 +51,46 @@ php artisan vendor:publish --tag="recommender-views"
 
 ## Usage
 
+Example: say you want to find AI matching jobs for the customer
+### Step 0: Prepare your model
+Implement EmbeddableContract to Eloquent model 
+use EmbeddableTrait
+
 ```php
-$recommender = new Subhendu\Recommender();
-echo $recommender->echoPhrase('Hello, Subhendu!');
+<?php
+
+namespace App\Models;
+
+use Subhendu\Recommender\Contracts\EmbeddableContract;
+use Subhendu\Recommender\Traits\EmbeddableTrait;
+
+class Customer extends Model implements EmbeddableContract
+{
+    use EmbeddableTrait;
+}
+```
+
+Once model is ready run
+
+### Step 1:
+`php artisan embedding:batch {modelName} {--type=sync|init} {--force}`
+
+Example: `php artisan embedding:batch App\\Models\\Customer --type=init`
+
+This will generate a jsonl file in `storage/app/embeddings/` which is uploaded to openai api
+
+### Step 2:
+`php artisan process-completed-batch`
+
+This will process the embeddings  (generated in step 1) and store them in the database
+
+- Repeat step 1 and 2 with other models if needed
+
+### Step 3 :You can now search using the `matchingResults` method:
+
+```php
+$customer = Customer::find(1);
+$customer->matchingResults(Job::class);
 ```
 
 ## Testing

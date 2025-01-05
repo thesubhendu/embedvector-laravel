@@ -41,10 +41,11 @@ class ProcessCompletedEmbeddingsCommand extends Command
 
             if (! $response->status) {
                 $this->info('no status found skipping the batch '.$batch->id);
+
                 continue;
             }
 
-            $this->info('Current Status: ' . $response->status);
+            $this->info('Current Status: '.$response->status);
 
             if ($response->status == 'completed') {
 
@@ -52,9 +53,9 @@ class ProcessCompletedEmbeddingsCommand extends Command
                 $this->info('Downloading Result File');
                 $filePath = $this->downloadAndSaveFile($batch, $response->outputFileId);
 
-                $this->info('File Downloaded and saved at ' . $filePath);
+                $this->info('File Downloaded and saved at '.$filePath);
 
-                $this->info('Started Processing batch id: '. $batch->id);
+                $this->info('Started Processing batch id: '.$batch->id);
 
                 $completedBatchService->process($batch);
 

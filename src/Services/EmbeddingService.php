@@ -2,18 +2,17 @@
 
 namespace Subhendu\Recommender\Services;
 
-use OpenAI;
+use OpenAI\Contracts\ClientContract;
 
 class EmbeddingService
 {
-    private OpenAI\Client $openai;
+    private ClientContract $openai;
 
     public string $embeddingModel = 'text-embedding-3-small';
 
-    public function __construct()
+    public function __construct(ClientContract $openaiClient)
     {
-
-        $this->openai = OpenAI::client(config('recommender.openai_api_key'));
+        $this->openai = $openaiClient;
     }
 
     public function getClient()

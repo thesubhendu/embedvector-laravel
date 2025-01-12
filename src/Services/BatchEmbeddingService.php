@@ -32,7 +32,7 @@ readonly class BatchEmbeddingService
         $this->uploadFilesDir = self::inputFileDirectory.'/'.class_basename($this->embeddableModel).'/'.$type;
     }
 
-    public function itemsToEmbedQuery(): Builder
+    private function itemsToEmbedQuery(): Builder
     {
         if ($this->type == 'init') {
             return $this->embeddableModel->queryForEmbedding();
@@ -76,7 +76,7 @@ readonly class BatchEmbeddingService
         return $response;
     }
 
-    private function getInputFileName($uniqueId = 1): string
+    public function getInputFileName($uniqueId = 1): string
     {
         return $this->uploadFilesDir."/embeddings_{$uniqueId}.jsonl";
     }
@@ -85,7 +85,7 @@ readonly class BatchEmbeddingService
      * @return void
      *              Generates embedding file(s) to upload to OpenAI
      */
-    public function generateJsonLFile(int $chunkSize): void
+    public function generateJsonLFile(int $chunkSize=500): void
     {
         $processedCount = 0;
         $jsonlContent = '';

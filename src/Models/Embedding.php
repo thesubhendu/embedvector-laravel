@@ -10,7 +10,5 @@ class Embedding extends Model
 {
     use HasNeighbors;
 
-    protected $casts = ['embedding' => Vector::class];
-
     protected $guarded = [];
 }

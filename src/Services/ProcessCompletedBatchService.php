@@ -32,6 +32,7 @@ readonly class ProcessCompletedBatchService
                 $data = json_decode($line, true);
                 $embeddingArray = $data['response']['body']['data'][0]['embedding'] ?? null;
 
+
                 if (! $embeddingArray) {
                     continue;
                 }

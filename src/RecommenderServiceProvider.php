@@ -2,6 +2,8 @@
 
 namespace Subhendu\Recommender;
 
+use OpenAI;
+use OpenAI\Client;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Subhendu\Recommender\Commands\BatchEmbeddingCommand;
@@ -9,6 +11,18 @@ use Subhendu\Recommender\Commands\ProcessCompletedEmbeddingsCommand;
 
 class RecommenderServiceProvider extends PackageServiceProvider
 {
+    public function boot()
+    {
+
+        $this->app->singleton(Client::class, function ($app) {
+            return OpenAI::client(config('recommender.openai_api_key'));
+        });
+
+        $this->app->bind(OpenAI\Contracts\ClientContract::class, Client::class);
+
+        return parent::boot();
+    }
+
     public function configurePackage(Package $package): void
     {
         /*

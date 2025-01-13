@@ -11,23 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-//        if (!Schema::hasTable('customers')) {
-            Schema::create('customers', function (Blueprint $table) {
-                $table->id();
-                $table->string('name');
-                $table->string('department');
-                $table->timestamps();
-            });
-//        }
+        //        if (!Schema::hasTable('customers')) {
+        Schema::create('customers', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('department');
+            $table->timestamps();
+        });
+        //        }
 
-//        if (!Schema::hasTable('jobs')) {
-            Schema::create('jobs', function (Blueprint $table) {
-                $table->id();
-                $table->string('title');
-                $table->string('department');
-                $table->timestamps();
-            });
-//        }
+        //        if (!Schema::hasTable('jobs')) {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('department');
+            $table->timestamps();
+        });
+        //        }
     }
 
     /**

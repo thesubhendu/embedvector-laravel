@@ -28,7 +28,7 @@ class CustomerFactory extends Factory
     {
         return [
             'name' => $this->faker->name(),
-            'department' => $this->faker->randomElement(['ICU','ER','OR','Post Op','Pre Op','Urology','Pediatrics']),
+            'department' => $this->faker->randomElement(['ICU', 'ER', 'OR', 'Post Op', 'Pre Op', 'Urology', 'Pediatrics']),
         ];
     }
 }

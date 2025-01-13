@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage ;
+use Illuminate\Support\Facades\Storage;
 use OpenAI\Client;
 use OpenAI\Testing\ClientFake;
 use Subhendu\Recommender\Models\Embedding;
@@ -9,10 +9,9 @@ use Subhendu\Recommender\Models\EmbeddingBatch;
 use Subhendu\Recommender\Services\BatchEmbeddingService;
 use Subhendu\Recommender\Services\ProcessCompletedBatchService;
 use Subhendu\Recommender\Tests\Fixtures\Models\Customer;
-use \Subhendu\Recommender\Tests\Fixtures\Models\Job;
+use Subhendu\Recommender\Tests\Fixtures\Models\Job;
 
 uses(RefreshDatabase::class);
-
 
 it('generates jsonl file', function () {
     app()->bind(Client::class, fn () => new ClientFake([
@@ -45,7 +44,6 @@ it('generates jsonl file', function () {
 
     expect(count($records))->toEqual(Customer::count());
 
-
     $path = $storageDisk->path($batchEmbeddingService->getInputFileName());
     $response = $batchEmbeddingService->uploadFileForBatchEmbedding($path);
 
@@ -57,32 +55,31 @@ it('processes completed batch and inserts into database', function () {
 
     Storage::fake('local');
     Storage::disk('local')->put(__DIR__.'/../tests/Fixtures/output_embeddings_1.jsonl', file_get_contents(__DIR__.'/../tests/Fixtures/output_embeddings_1.jsonl'));
-   $batch = EmbeddingBatch::create(
-       [
-           'batch_id' => 'testbatchid',
-           'input_file_id' => 'file-abc123',
-           'output_file_id' => 'file-abc123',
-           'saved_file_path' => __DIR__.'/../tests/Fixtures/output_embeddings_1.jsonl',
-           'embeddable_model' => Customer::class,
-           'status' => 'completed',
-       ]
-   );
+    $batch = EmbeddingBatch::create(
+        [
+            'batch_id' => 'testbatchid',
+            'input_file_id' => 'file-abc123',
+            'output_file_id' => 'file-abc123',
+            'saved_file_path' => __DIR__.'/../tests/Fixtures/output_embeddings_1.jsonl',
+            'embeddable_model' => Customer::class,
+            'status' => 'completed',
+        ]
+    );
 
-   app(ProcessCompletedBatchService::class)->process($batch);
+    app(ProcessCompletedBatchService::class)->process($batch);
 
-   expect(Embedding::count())->toBe(50);
+    expect(Embedding::count())->toBe(50);
 
-   $embedding = Embedding::first();
+    $embedding = Embedding::first();
 
-   expect($embedding->embedding)->toBeTruthy();
+    expect($embedding->embedding)->toBeTruthy();
 
 });
 
 it('gives correct matching results', function () {
-   // create embeddings for customers and jobs
+    // create embeddings for customers and jobs
 
-   Job::factory()->count(10)->create();
-   Customer::factory()->count(10)->create();
-
+    Job::factory()->count(10)->create();
+    Customer::factory()->count(10)->create();
 
 });

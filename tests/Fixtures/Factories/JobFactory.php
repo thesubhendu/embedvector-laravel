@@ -12,7 +12,6 @@ use Subhendu\Recommender\Tests\Fixtures\Models\Job;
  */
 class JobFactory extends Factory
 {
-
     /**
      * The name of the factory's corresponding model.
      *
@@ -29,7 +28,7 @@ class JobFactory extends Factory
     {
         return [
             'title' => $this->faker->title,
-            'department' => $this->faker->randomElement(['ICU','ER','OR','Post Op','Pre Op','Urology','Pediatrics']),
+            'department' => $this->faker->randomElement(['ICU', 'ER', 'OR', 'Post Op', 'Pre Op', 'Urology', 'Pediatrics']),
 
         ];
     }

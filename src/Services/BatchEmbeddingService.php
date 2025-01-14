@@ -85,7 +85,7 @@ readonly class BatchEmbeddingService
      * @return void
      *              Generates embedding file(s) to upload to OpenAI
      */
-    public function generateJsonLFile(int $chunkSize=500): void
+    public function generateJsonLFile(int $chunkSize = 500): void
     {
         $processedCount = 0;
         $jsonlContent = '';

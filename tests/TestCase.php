@@ -3,14 +3,10 @@
 namespace Subhendu\Recommender\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Subhendu\Recommender\RecommenderServiceProvider;
 
 use function Orchestra\Testbench\package_path;
-use function Orchestra\Testbench\workbench_path;
 
 class TestCase extends Orchestra
 {
@@ -38,10 +34,10 @@ class TestCase extends Orchestra
     protected function defineDatabaseMigrations()
     {
         $this->loadMigrationsFrom(
-                 package_path('/database/migrations/'),
+            package_path('/database/migrations/'),
         );
         $this->loadMigrationsFrom(
-                 package_path('/tests/Fixtures/Migrations/'),
+            package_path('/tests/Fixtures/Migrations/'),
         );
     }
 

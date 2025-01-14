@@ -12,7 +12,6 @@ class Job extends Model implements EmbeddableContract
     use EmbeddableTrait;
     use HasFactory;
 
-
     public function toEmbeddingText(): string
     {
         return $this->department;

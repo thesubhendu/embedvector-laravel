@@ -94,6 +94,7 @@ readonly class BatchEmbeddingService
         $this->itemsToEmbedQuery()
             ->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
                 foreach ($models as $model) {
+                    /** @var \Subhendu\Recommender\Contracts\EmbeddableContract $model */
                     $jsonlContent .= $this->generateJsonLine($model)."\n";
                     $processedCount++;
 

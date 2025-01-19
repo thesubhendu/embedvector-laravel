@@ -40,8 +40,13 @@ This is the contents of the published config file:
 
 ```php
 return [
+    'openai_api_key' => env('OPENAI_API_KEY', ''),
 ];
 ```
+Add your openai api key to the .env file as OPENAI_API_KEY
+
+To get api key login or signup at https://platform.openai.com/api-keys and create a new api key
+```bash
 
 Optionally, you can publish the views using
 

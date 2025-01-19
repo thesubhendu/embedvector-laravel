@@ -46,13 +46,6 @@ return [
 Add your openai api key to the .env file as OPENAI_API_KEY
 
 To get api key login or signup at https://platform.openai.com/api-keys and create a new api key
-```bash
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="recommender-views"
-```
 
 ## Usage
 
@@ -104,23 +97,9 @@ $customer->matchingResults(Job::class);
 composer test
 ```
 
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
 ## Credits
 
 - [Subhendu Bhatta](https://github.com/thesubhendu)
 - [All Contributors](../../contributors)
 
-## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

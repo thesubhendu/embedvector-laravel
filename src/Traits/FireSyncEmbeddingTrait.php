@@ -1,9 +1,9 @@
 <?php
 
-namespace Subhendu\Recommender\Traits;
+namespace Subhendu\EmbedVector\Traits;
 
 use Illuminate\Database\Eloquent\Model;
-use Subhendu\Recommender\Models\Embedding;
+use Subhendu\EmbedVector\Models\Embedding;
 
 trait FireSyncEmbeddingTrait
 {

@@ -1,14 +1,14 @@
 <?php
 
-namespace Subhendu\Recommender\Services;
+namespace Subhendu\EmbedVector\Services;
 
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Pgvector\Laravel\Vector;
-use Subhendu\Recommender\Contracts\EmbeddableContract;
-use Subhendu\Recommender\Models\EmbeddingBatch;
+use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Models\EmbeddingBatch;
 
 readonly class ProcessCompletedBatchService
 {

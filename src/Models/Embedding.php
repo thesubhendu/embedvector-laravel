@@ -1,6 +1,6 @@
 <?php
 
-namespace Subhendu\Recommender\Models;
+namespace Subhendu\EmbedVector\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Pgvector\Laravel\HasNeighbors;

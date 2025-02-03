@@ -1,6 +1,6 @@
 <?php
 
-namespace Subhendu\Recommender\Database\Factories;
+namespace Subhendu\EmbedVector\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 

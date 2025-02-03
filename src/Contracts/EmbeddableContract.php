@@ -1,6 +1,6 @@
 <?php
 
-namespace Subhendu\Recommender\Contracts;
+namespace Subhendu\EmbedVector\Contracts;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;

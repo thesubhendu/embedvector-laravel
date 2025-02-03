@@ -1,12 +1,12 @@
 <?php
 
-namespace Subhendu\Recommender\Services;
+namespace Subhendu\EmbedVector\Services;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
-use Subhendu\Recommender\Contracts\EmbeddableContract;
-use Subhendu\Recommender\Models\EmbeddingBatch;
+use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Models\EmbeddingBatch;
 
 readonly class BatchEmbeddingService
 {
@@ -94,7 +94,7 @@ readonly class BatchEmbeddingService
         $this->itemsToEmbedQuery()
             ->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
                 foreach ($models as $model) {
-                    /** @var \Subhendu\Recommender\Contracts\EmbeddableContract $model */
+                    /** @var \Subhendu\EmbedVector\Contracts\EmbeddableContract $model */
                     $jsonlContent .= $this->generateJsonLine($model)."\n";
                     $processedCount++;
 

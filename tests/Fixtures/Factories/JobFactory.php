@@ -1,9 +1,9 @@
 <?php
 
-namespace Subhendu\Recommender\Tests\Fixtures\Factories;
+namespace Subhendu\EmbedVector\Tests\Fixtures\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Subhendu\Recommender\Tests\Fixtures\Models\Job;
+use Subhendu\EmbedVector\Tests\Fixtures\Models\Job;
 
 /**
  * @template TModel of Job

@@ -1,10 +1,10 @@
 <?php
 
-namespace Subhendu\Recommender\Tests;
+namespace Subhendu\EmbedVector\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Subhendu\Recommender\RecommenderServiceProvider;
+use Subhendu\EmbedVector\EmbedVectorServiceProvider;
 
 use function Orchestra\Testbench\package_path;
 
@@ -22,7 +22,7 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app)
     {
         return [
-            RecommenderServiceProvider::class,
+            EmbedVectorServiceProvider::class,
         ];
     }
 

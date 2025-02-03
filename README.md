@@ -8,19 +8,9 @@
 This package provides a recommendation engine using Open AI embedding and PostgresSQL pgvector. It uses the openai api to generate embeddings and stores them in the database. It then uses pgvector to search for similar embeddings.
 
 ## Installation
-Add this to composer.json
-```
-"repositories": [
-    {
-    "type": "vcs",
-    "url": "https://github.com/thesubhendu/recommender"
-    }
-]
-```
 
-Then run
 ```bash
-composer require thesubhendu/recommender:"dev-main"
+composer require thesubhendu/embedvector-laravel
 ```
 
 You can publish and run the migrations with:
@@ -33,7 +23,7 @@ php artisan migrate
 You can publish the config file with:
 
 ```bash
-php artisan vendor:publish --tag="recommender-config"
+php artisan vendor:publish --tag="embed-vector-config"
 ```
 
 This is the contents of the published config file:
@@ -59,8 +49,8 @@ use EmbeddableTrait
 
 namespace App\Models;
 
-use Subhendu\Recommender\Contracts\EmbeddableContract;
-use Subhendu\Recommender\Traits\EmbeddableTrait;
+use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Traits\EmbeddableTrait;
 
 class Customer extends Model implements EmbeddableContract
 {

@@ -1,10 +1,10 @@
 <?php
 
-namespace Subhendu\Recommender\Commands;
+namespace Subhendu\EmbedVector\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Subhendu\Recommender\Services\BatchEmbeddingService;
+use Subhendu\EmbedVector\Services\BatchEmbeddingService;
 
 class BatchEmbeddingCommand extends Command
 {

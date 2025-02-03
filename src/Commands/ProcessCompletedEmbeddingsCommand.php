@@ -1,12 +1,12 @@
 <?php
 
-namespace Subhendu\Recommender\Commands;
+namespace Subhendu\EmbedVector\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Subhendu\Recommender\Models\EmbeddingBatch;
-use Subhendu\Recommender\Services\EmbeddingService;
-use Subhendu\Recommender\Services\ProcessCompletedBatchService;
+use Subhendu\EmbedVector\Models\EmbeddingBatch;
+use Subhendu\EmbedVector\Services\EmbeddingService;
+use Subhendu\EmbedVector\Services\ProcessCompletedBatchService;
 
 class ProcessCompletedEmbeddingsCommand extends Command
 {

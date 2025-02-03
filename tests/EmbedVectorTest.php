@@ -5,12 +5,12 @@ use Illuminate\Support\Facades\Storage;
 use OpenAI\Client;
 use OpenAI\Testing\ClientFake;
 use Pgvector\Laravel\Vector;
-use Subhendu\Recommender\Models\Embedding;
-use Subhendu\Recommender\Models\EmbeddingBatch;
-use Subhendu\Recommender\Services\BatchEmbeddingService;
-use Subhendu\Recommender\Services\ProcessCompletedBatchService;
-use Subhendu\Recommender\Tests\Fixtures\Models\Customer;
-use Subhendu\Recommender\Tests\Fixtures\Models\Job;
+use Subhendu\EmbedVector\Models\Embedding;
+use Subhendu\EmbedVector\Models\EmbeddingBatch;
+use Subhendu\EmbedVector\Services\BatchEmbeddingService;
+use Subhendu\EmbedVector\Services\ProcessCompletedBatchService;
+use Subhendu\EmbedVector\Tests\Fixtures\Models\Customer;
+use Subhendu\EmbedVector\Tests\Fixtures\Models\Job;
 
 uses(RefreshDatabase::class);
 

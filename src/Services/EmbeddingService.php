@@ -1,6 +1,6 @@
 <?php
 
-namespace Subhendu\Recommender\Services;
+namespace Subhendu\EmbedVector\Services;
 
 use OpenAI\Contracts\ClientContract;
 

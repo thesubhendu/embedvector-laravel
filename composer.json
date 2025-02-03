@@ -1,5 +1,5 @@
 {
-    "name": "thesubhendu/recommender",
+    "name": "thesubhendu/embedvector-laravel",
     "version": "1.0.0",
     "description": "Recommendation engine using Open AI embedding and PostgresSQL pgvector",
     "keywords": [
@@ -7,7 +7,7 @@
         "laravel",
         "recommender"
     ],
-    "homepage": "https://github.com/thesubhendu/recommender",
+    "homepage": "https://github.com/thesubhendu/embedvector-laravel",
     "license": "MIT",
     "authors": [
         {
@@ -37,13 +37,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Subhendu\\Recommender\\": "src/",
-            "Subhendu\\Recommender\\Database\\Factories\\": "database/factories/"
+            "Subhendu\\EmbedVector\\": "src/",
+            "Subhendu\\EmbedVector\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Subhendu\\Recommender\\Tests\\": "tests/",
+            "Subhendu\\EmbedVector\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -76,7 +76,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Subhendu\\Recommender\\RecommenderServiceProvider"
+                "Subhendu\\EmbedVector\\EmbedVectorServiceProvider"
             ],
             "aliases": {
             }

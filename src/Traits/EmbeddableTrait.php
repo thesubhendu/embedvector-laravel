@@ -1,13 +1,13 @@
 <?php
 
-namespace Subhendu\Recommender\Traits;
+namespace Subhendu\EmbedVector\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Pgvector\Laravel\Distance;
-use Subhendu\Recommender\Contracts\EmbeddableContract;
-use Subhendu\Recommender\Models\Embedding;
+use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Models\Embedding;
 
 trait EmbeddableTrait
 {

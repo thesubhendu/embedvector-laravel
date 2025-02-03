@@ -1,11 +1,12 @@
 {
     "name": "thesubhendu/embedvector-laravel",
-    "version": "1.0.0",
     "description": "Recommendation engine using Open AI embedding and PostgresSQL pgvector",
     "keywords": [
         "Subhendu Bhatta",
         "laravel",
-        "recommender"
+        "embeddings",
+        "pgvector",
+        "openai"
     ],
     "homepage": "https://github.com/thesubhendu/embedvector-laravel",
     "license": "MIT",

@@ -15,7 +15,7 @@ class TestCase extends Orchestra
         parent::setUp();
 
         Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Subhendu\\Recommender\\Tests\\Fixtures\\Factories\\'.class_basename($modelName).'Factory'
+            fn (string $modelName) => 'Subhendu\\EmbedVector\\Tests\\Fixtures\\Factories\\'.class_basename($modelName).'Factory'
         );
     }
 

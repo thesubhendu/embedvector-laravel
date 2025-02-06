@@ -7,6 +7,8 @@
 
 This package provides a recommendation engine using Open AI embedding and PostgresSQL pgvector. It uses the openai api to generate embeddings and stores them in the database. It then uses pgvector to search for similar embeddings.
 
+> **⚠️ Notice:** This package is currently in development and not yet ready for production use. Please use at your own risk.
+
 ## Installation
 
 ```bash

@@ -14,10 +14,6 @@ readonly class BatchEmbeddingService
 
     private Filesystem $disk;
 
-    private const lotSize = 50000; // it is limit, create folder and files to it in chunk of 50k each file
-
-    public const inputFileDirectory = 'embeddings/input';  // using storage local disk , input file that will be uploaded to openAI
-
     public string $uploadFilesDir;
 
     public function __construct(
@@ -29,7 +25,7 @@ readonly class BatchEmbeddingService
         $this->disk = Storage::disk('local');
         $this->embeddableModel = app($embeddableModelName);
 
-        $this->uploadFilesDir = self::inputFileDirectory.'/'.class_basename($this->embeddableModel).'/'.$type;
+        $this->uploadFilesDir = config('embedvector.directories.input').'/'.class_basename($this->embeddableModel).'/'.$type;
     }
 
     private function itemsToEmbedQuery(): Builder
@@ -85,33 +81,34 @@ readonly class BatchEmbeddingService
      * @return void
      *              Generates embedding file(s) to upload to OpenAI
      */
-    public function generateJsonLFile(int $chunkSize = 500): void
+    public function generateJsonLFile(int $chunkSize = null): void
     {
+        $chunkSize = $chunkSize ?? config('embedvector.chunk_size', 500);
         $processedCount = 0;
         $jsonlContent = '';
         $batchCount = 1;
 
-        $this->itemsToEmbedQuery()
-            ->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
-                foreach ($models as $model) {
-                    /** @var \Subhendu\EmbedVector\Contracts\EmbeddableContract $model */
-                    $jsonlContent .= $this->generateJsonLine($model)."\n";
-                    $processedCount++;
+        $this->itemsToEmbedQuery()->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
+            foreach ($models as $model) {
+                /** @var \Subhendu\EmbedVector\Contracts\EmbeddableContract $model */
+                $jsonlContent .= $this->generateJsonLine($model) . "\n";
+                $processedCount++;
 
-                    if ($processedCount >= self::lotSize) {
-                        $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
-                        $jsonlContent = '';
-                        $processedCount = 0;
-                        $batchCount++;
-                    }
-
-                    if ($jsonlContent) {
-                        $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
-                    }
+                if ($processedCount >= config('embedvector.lot_size')) {
+                    $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
+                    $jsonlContent = '';
+                    $processedCount = 0;
+                    $batchCount++;
                 }
-            });
+            }
+            // Flush after processing each chunk to capture any remaining lines
+            if (! empty($jsonlContent)) {
+                $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
+                $jsonlContent = '';
+            }
+        });
 
-        if ($jsonlContent) {
+        if (! empty($jsonlContent)) {
             $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
         }
     }

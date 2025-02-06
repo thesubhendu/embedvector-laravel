@@ -12,8 +12,6 @@ class ProcessCompletedEmbeddingsCommand extends Command
 {
     protected $signature = 'process-completed-batch';
 
-    public const outputFileDirectory = 'embeddings/output';
-
     protected $description = 'Process Completed Batches';
 
     public function __construct(
@@ -71,7 +69,7 @@ class ProcessCompletedEmbeddingsCommand extends Command
 
     private function downloadAndSaveFile(EmbeddingBatch $batch, string $outputFileId): string
     {
-        $filePath = self::outputFileDirectory.'/output_embeddings_'.$batch->id.'.jsonl';
+        $filePath = config('embedvector.directories.output').'/output_embeddings_'.$batch->id.'.jsonl';
 
         Storage::disk('local')->put($filePath, $this->embeddingService->getClient()->files()->download($outputFileId));
 

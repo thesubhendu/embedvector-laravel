@@ -20,7 +20,7 @@ trait FireSyncEmbeddingTrait
 
     private static function getFieldsToCheck(Model $model): array
     {
-        $map = config('recommender.model_fields_to_check');
+        $map = config('embedvector.model_fields_to_check');
 
         return $map[get_class($model)] ?? [];
     }

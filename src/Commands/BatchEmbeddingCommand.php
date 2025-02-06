@@ -51,6 +51,7 @@ class BatchEmbeddingCommand extends Command
 
         if (count($files) < 1) {
             $this->info('No Files generated to upload. This user may already have been initialized.');
+
             return;
         }
 
@@ -59,7 +60,7 @@ class BatchEmbeddingCommand extends Command
                 $batchEmbeddingService->uploadFileForBatchEmbedding($this->disk->path($file));
                 $this->info('File uploaded and batch created successfully! We will process it soon.');
             } catch (Exception $e) {
-                $this->error('Error while uploading file for batch embedding: ' . $e->getMessage());
+                $this->error('Error while uploading file for batch embedding: '.$e->getMessage());
             }
         }
     }

@@ -81,7 +81,7 @@ readonly class BatchEmbeddingService
      * @return void
      *              Generates embedding file(s) to upload to OpenAI
      */
-    public function generateJsonLFile(int $chunkSize = null): void
+    public function generateJsonLFile(?int $chunkSize = null): void
     {
         $chunkSize = $chunkSize ?? config('embedvector.chunk_size', 500);
         $processedCount = 0;
@@ -91,7 +91,7 @@ readonly class BatchEmbeddingService
         $this->itemsToEmbedQuery()->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
             foreach ($models as $model) {
                 /** @var \Subhendu\EmbedVector\Contracts\EmbeddableContract $model */
-                $jsonlContent .= $this->generateJsonLine($model) . "\n";
+                $jsonlContent .= $this->generateJsonLine($model)."\n";
                 $processedCount++;
 
                 if ($processedCount >= config('embedvector.lot_size')) {

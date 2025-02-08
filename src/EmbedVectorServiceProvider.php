@@ -15,7 +15,10 @@ class EmbedVectorServiceProvider extends PackageServiceProvider
     {
 
         $this->app->singleton(Client::class, function ($app) {
-            return OpenAI::client(config('embedvector.openai_api_key'));
+            return OpenAI::factory()
+                ->withApiKey(config('embedvector.openai_api_key'))
+                ->withBaseUri(config('embedvector.api_base_uri'))
+                ->make();
         });
 
         $this->app->bind(OpenAI\Contracts\ClientContract::class, Client::class);

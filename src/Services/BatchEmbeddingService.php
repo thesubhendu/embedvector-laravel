@@ -120,7 +120,7 @@ readonly class BatchEmbeddingService
             'method' => 'POST',
             'url' => '/v1/embeddings',
             'body' => [
-                'model' => $this->embeddingService->embeddingModel,
+                'model' => $this->embeddingService->getEmbeddingModel(),
                 'input' => $model->toEmbeddingText(),
             ],
         ];

@@ -32,12 +32,30 @@ This is the contents of the published config file:
 
 ```php
 return [
-    'openai_api_key' => env('OPENAI_API_KEY', ''),
+    'openai_api_key' => env('OPENAI_API_KEY', 'lm-studio'),
+    'api_base_uri' => env('OPENAI_BASE_URI', ''),
+    'lot_size' => env('EMBEDVECTOR_LOT_SIZE', 50000), // openai limit of how many items processing/batch
+    'chunk_size' => env('EMBEDVECTOR_CHUNK_SIZE', 500), // processes in 500 model chunk
+    'directories' => [
+        'input' => 'embeddings/input',
+        'output' => 'embeddings/output',
+    ],
+    // Optionally add fields to check for syncing events:
+    'model_fields_to_check' => [
+        // Fully qualify your model classes and their fields here
+        // \App\Models\YourModel::class => ['field1', 'field2'],
+    ],
 ];
 ```
 Add your openai api key to the .env file as OPENAI_API_KEY
-
 To get api key login or signup at https://platform.openai.com/api-keys and create a new api key
+
+If you are using local llm using lm-studio, you can use the following config:
+
+```php
+'openai_api_key' => env('OPENAI_API_KEY', 'lm-studio'),
+'api_base_uri' => env('OPENAI_BASE_URI', 'http://localhost:1234/v1'),
+```
 
 ## Usage
 

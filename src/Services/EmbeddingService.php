@@ -8,8 +8,6 @@ class EmbeddingService
 {
     private ClientContract $openai;
 
-    public string $embeddingModel = 'text-embedding-3-small';
-
     public function __construct(ClientContract $openaiClient)
     {
         $this->openai = $openaiClient;
@@ -18,5 +16,10 @@ class EmbeddingService
     public function getClient()
     {
         return $this->openai;
+    }
+
+    public function getEmbeddingModel()
+    {
+        return config('embedvector.embedding_model');
     }
 }

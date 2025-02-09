@@ -9,7 +9,9 @@ use Subhendu\EmbedVector\Contracts\EmbeddableContract;
 class JsonlFileGeneratorService
 {
     private Filesystem $disk;
+
     private string $uploadFilesDir;
+
     private EmbeddableContract $embeddableModel;
 
     public function __construct(
@@ -22,15 +24,15 @@ class JsonlFileGeneratorService
     {
         $this->embeddableModel = app($embeddableModelName);
         $this->uploadFilesDir = $this->buildUploadFilesDir($type);
-        
+
         // Clear any existing files in the directory
         if ($this->disk->exists($this->uploadFilesDir)) {
             $this->disk->deleteDirectory($this->uploadFilesDir);
         }
-        
+
         // Create fresh directory
         $this->disk->makeDirectory($this->uploadFilesDir, 0755, true);
-        
+
         $chunkSize = $chunkSize ?? config('embedvector.chunk_size', 500);
         $processedCount = 0;
         $jsonlContent = '';
@@ -38,17 +40,18 @@ class JsonlFileGeneratorService
 
         // Get the query results
         $query = $this->getItemsToEmbedQuery($type);
-        
+
         // If no records to process, create empty file
         if ($query->count() === 0) {
             $this->disk->put($this->getInputFileName(1), '');
+
             return;
         }
 
         $query->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
             foreach ($models as $model) {
                 /** @var \Subhendu\EmbedVector\Contracts\EmbeddableContract $model */
-                $jsonlContent .= $this->generateJsonLine($model) . "\n";
+                $jsonlContent .= $this->generateJsonLine($model)."\n";
                 $processedCount++;
 
                 if ($processedCount >= config('embedvector.lot_size')) {
@@ -58,22 +61,22 @@ class JsonlFileGeneratorService
                     $batchCount++;
                 }
             }
-            
-            if (!empty($jsonlContent)) {
+
+            if (! empty($jsonlContent)) {
                 $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
                 $jsonlContent = '';
             }
         });
 
         // Final write if there's any remaining content
-        if (!empty($jsonlContent)) {
+        if (! empty($jsonlContent)) {
             $this->disk->put($this->getInputFileName($batchCount), $jsonlContent);
         }
     }
 
     private function getItemsToEmbedQuery(string $type)
     {
-        return $type === 'init' 
+        return $type === 'init'
             ? $this->embeddableModel->queryForEmbedding()
             : $this->embeddableModel->queryForSyncing();
     }
@@ -102,4 +105,4 @@ class JsonlFileGeneratorService
 
         return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
-} 
+}

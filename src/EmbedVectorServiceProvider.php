@@ -8,10 +8,9 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Subhendu\EmbedVector\Commands\BatchEmbeddingCommand;
 use Subhendu\EmbedVector\Commands\ProcessCompletedEmbeddingsCommand;
-use Illuminate\Support\ServiceProvider;
 use Subhendu\EmbedVector\Contracts\EmbeddingServiceContract;
-use Subhendu\EmbedVector\Services\OpenAIBatchEmbeddingService;
 use Subhendu\EmbedVector\Services\LMStudioEmbeddingService;
+use Subhendu\EmbedVector\Services\OpenAIBatchEmbeddingService;
 
 class EmbedVectorServiceProvider extends PackageServiceProvider
 {

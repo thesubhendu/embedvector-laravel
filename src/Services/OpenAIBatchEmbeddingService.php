@@ -42,7 +42,7 @@ readonly class OpenAIBatchEmbeddingService
                 $results['messages'][] = 'File uploaded and batch created successfully! We will process it soon.';
             } catch (Exception $e) {
                 $results['success'] = false;
-                $results['messages'][] = 'Error while processing file for batch embedding: ' . $e->getMessage();
+                $results['messages'][] = 'Error while processing file for batch embedding: '.$e->getMessage();
             }
         }
 

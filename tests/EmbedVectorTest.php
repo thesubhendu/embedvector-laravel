@@ -8,7 +8,6 @@ use Pgvector\Laravel\Vector;
 use Subhendu\EmbedVector\Models\Embedding;
 use Subhendu\EmbedVector\Models\EmbeddingBatch;
 use Subhendu\EmbedVector\Services\OpenAIBatchEmbeddingService;
-use Subhendu\EmbedVector\Services\JsonlFileGeneratorService;
 use Subhendu\EmbedVector\Services\ProcessCompletedBatchService;
 use Subhendu\EmbedVector\Tests\Fixtures\Models\Customer;
 use Subhendu\EmbedVector\Tests\Fixtures\Models\Job;
@@ -56,7 +55,7 @@ it('generates jsonl file and processes batch', function () {
     try {
         $result = $batchEmbeddingService->process(Customer::class, 'init');
     } catch (Exception $e) {
-        $this->fail('Failed to process batch: ' . $e->getMessage());
+        $this->fail('Failed to process batch: '.$e->getMessage());
     }
 
     // Get the generated file path
@@ -67,7 +66,6 @@ it('generates jsonl file and processes batch', function () {
     $files = $storageDisk->allFiles();
     $directories = $storageDisk->allDirectories();
 
-
     expect($files)->not->toBeEmpty()
         ->and($uploadFilesDir)->toBe('embeddings/input/Customer/init');
 
@@ -75,7 +73,7 @@ it('generates jsonl file and processes batch', function () {
     expect($storageDisk->exists($uploadFilesDir))->toBeTrue();
 
     // Assert file was created
-    expect($storageDisk->exists($filePath))->toBeTrue("File not found at {$filePath}. Available files: " . implode(', ', $files));
+    expect($storageDisk->exists($filePath))->toBeTrue("File not found at {$filePath}. Available files: ".implode(', ', $files));
 
     // Verify file contents
     $content = $storageDisk->get($filePath);

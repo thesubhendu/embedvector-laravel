@@ -49,7 +49,7 @@ class LMStudioEmbeddingService implements EmbeddingServiceContract
 
         } catch (Exception $e) {
             $results['success'] = false;
-            $results['messages'][] = 'Error during processing: ' . $e->getMessage();
+            $results['messages'][] = 'Error during processing: '.$e->getMessage();
         }
 
         return $results;
@@ -62,7 +62,7 @@ class LMStudioEmbeddingService implements EmbeddingServiceContract
             'input' => $input,
         ]);
 
-        if(is_array($input)) {
+        if (is_array($input)) {
             return $response->embeddings;
         }
 

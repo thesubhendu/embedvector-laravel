@@ -7,14 +7,22 @@ use OpenAI\Testing\ClientFake;
 use Pgvector\Laravel\Vector;
 use Subhendu\EmbedVector\Models\Embedding;
 use Subhendu\EmbedVector\Models\EmbeddingBatch;
-use Subhendu\EmbedVector\Services\BatchEmbeddingService;
+use Subhendu\EmbedVector\Services\OpenAIBatchEmbeddingService;
+use Subhendu\EmbedVector\Services\JsonlFileGeneratorService;
 use Subhendu\EmbedVector\Services\ProcessCompletedBatchService;
 use Subhendu\EmbedVector\Tests\Fixtures\Models\Customer;
 use Subhendu\EmbedVector\Tests\Fixtures\Models\Job;
 
 uses(RefreshDatabase::class);
 
-it('generates jsonl file', function () {
+it('generates jsonl file and processes batch', function () {
+    // Set up config
+    config([
+        'embedvector.directories.input' => 'embeddings/input',
+        'embedvector.chunk_size' => 500,
+        'embedvector.lot_size' => 1000,
+    ]);
+
     app()->bind(Client::class, fn () => new ClientFake([
         OpenAI\Responses\Files\CreateResponse::fake([
             'id' => 'file-abc123',
@@ -29,27 +37,65 @@ it('generates jsonl file', function () {
         ]),
     ]));
 
+    // Create test data
     Job::factory()->count(10)->create();
-    Customer::factory()->count(10)->create();
+    $customers = Customer::factory()->count(10)->create();
 
+    // Verify test data was created
+    expect(Customer::count())->toBe(10)
+        ->and(Job::count())->toBe(10);
+
+    // Set up storage
     Storage::fake('local');
     $storageDisk = Storage::disk('local');
 
-    $batchEmbeddingService = app()->make(BatchEmbeddingService::class, ['embeddableModelName' => Customer::class, 'type' => 'init']);
-    $batchEmbeddingService->generateJsonLFile();
+    // Get the services from the container
+    $batchEmbeddingService = app(OpenAIBatchEmbeddingService::class);
 
-    $storageDisk->assertExists($batchEmbeddingService->getInputFileName());
+    // Generate the file and process the batch
+    try {
+        $result = $batchEmbeddingService->process(Customer::class, 'init');
+    } catch (Exception $e) {
+        $this->fail('Failed to process batch: ' . $e->getMessage());
+    }
 
-    $content = $storageDisk->get($batchEmbeddingService->getInputFileName());
+    // Get the generated file path
+    $uploadFilesDir = config('embedvector.directories.input').'/'.class_basename(Customer::class).'/init';
+    $filePath = $uploadFilesDir.'/embeddings_1.jsonl';
+
+    // Debug information
+    $files = $storageDisk->allFiles();
+    $directories = $storageDisk->allDirectories();
+
+
+    expect($files)->not->toBeEmpty()
+        ->and($uploadFilesDir)->toBe('embeddings/input/Customer/init');
+
+    // Assert directory exists
+    expect($storageDisk->exists($uploadFilesDir))->toBeTrue();
+
+    // Assert file was created
+    expect($storageDisk->exists($filePath))->toBeTrue("File not found at {$filePath}. Available files: " . implode(', ', $files));
+
+    // Verify file contents
+    $content = $storageDisk->get($filePath);
     $records = array_filter(explode("\n", $content));
-
     expect(count($records))->toEqual(Customer::count());
 
-    $path = $storageDisk->path($batchEmbeddingService->getInputFileName());
-    $response = $batchEmbeddingService->uploadFileForBatchEmbedding($path);
+    // Verify batch processing result
+    expect($result)->toBeArray()
+        ->toHaveKey('success', true)
+        ->toHaveKey('messages')
+        ->and($result['messages'])->toContain('File uploaded and batch created successfully! We will process it soon.');
 
-    expect($response->id)->toEqual('testbatchid');
+    // Verify batch was created in database
+    expect(EmbeddingBatch::count())->toBe(1);
 
+    $batch = EmbeddingBatch::first();
+    expect($batch->batch_id)->toBe('testbatchid')
+        ->and($batch->input_file_id)->toBe('file-abc123')
+        ->and($batch->embeddable_model)->toBe(Customer::class)
+        ->and($batch->status)->toBe('validating');
 });
 
 it('processes completed batch and inserts into database', function () {
@@ -77,7 +123,7 @@ it('processes completed batch and inserts into database', function () {
 
 });
 
-it('gives correct matching results', closure: function () {
+it('gives correct matching results', function () {
     // Create models first to get their actual IDs
     $jobs = Job::factory()->count(10)->create();
     $customers = Customer::factory()->count(10)->create();

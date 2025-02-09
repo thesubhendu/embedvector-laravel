@@ -112,4 +112,23 @@ composer test
 - [Subhendu Bhatta](https://github.com/thesubhendu)
 - [All Contributors](../../contributors)
 
+### LMStudio Support
+
+The package now supports local embedding using LMStudio. To use LMStudio:
+
+1. Make sure LMStudio is running and the API server is enabled
+2. Set `EMBEDVECTOR_DRIVER=lmstudio` in your `.env` file
+3. Configure the `LMSTUDIO_BASE_URL` if your server runs on a different address
+4. Note that batch embedding is automatically handled one text at a time for LMStudio
+
+#### OpenAI Configuration
+EMBEDVECTOR_DRIVER=openai
+OPENAI_API_KEY=your-api-key
+OPENAI_EMBEDDING_MODEL=text-embedding-ada-002
+OPENAI_BATCH_SIZE=100
+
+#### LMStudio Configuration
+EMBEDVECTOR_DRIVER=lmstudio
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+LMSTUDIO_EMBEDDING_MODEL=text-embedding-ada-002
 

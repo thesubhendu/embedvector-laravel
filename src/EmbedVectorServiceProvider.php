@@ -8,6 +8,10 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Subhendu\EmbedVector\Commands\BatchEmbeddingCommand;
 use Subhendu\EmbedVector\Commands\ProcessCompletedEmbeddingsCommand;
+use Illuminate\Support\ServiceProvider;
+use Subhendu\EmbedVector\Contracts\EmbeddingServiceContract;
+use Subhendu\EmbedVector\Services\OpenAIBatchEmbeddingService;
+use Subhendu\EmbedVector\Services\LMStudioEmbeddingService;
 
 class EmbedVectorServiceProvider extends PackageServiceProvider
 {
@@ -22,6 +26,15 @@ class EmbedVectorServiceProvider extends PackageServiceProvider
         });
 
         $this->app->bind(OpenAI\Contracts\ClientContract::class, Client::class);
+
+        $this->app->bind(EmbeddingServiceContract::class, function ($app) {
+            $driver = config('embedvector.driver');
+
+            return match ($driver) {
+                'lmstudio' => $app->make(LMStudioEmbeddingService::class),
+                default => $app->make(OpenAIBatchEmbeddingService::class),
+            };
+        });
 
         return parent::boot();
     }

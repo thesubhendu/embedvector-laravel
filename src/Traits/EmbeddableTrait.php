@@ -53,23 +53,37 @@ trait EmbeddableTrait
             return collect();
         }
 
-        // Determine distance metric (default: cosine)
+        // Determine distance metric (default: cosine) and corresponding operator
         $distanceMetric = strtolower((string) config('embedvector.distance_metric', 'cosine')) === 'l2'
             ? Distance::L2
             : Distance::COSINE;
 
-        $query = Embedding::query()
-            ->nearestNeighbors('embedding', $sourceEmbedding, $distanceMetric)
-            ->where('model_type', '=', $targetModelClass)
-            ->take($topK);
+        $operator = $distanceMetric === Distance::L2 ? '<->' : '<=>';
 
-        // Exclude self when matching within the same model class
+        // Build scoring subquery with distance and match_percent
+        $scores = Embedding::query()
+            ->select('model_id')
+            ->selectRaw("(embedding $operator ?) as distance", [$sourceEmbedding])
+            ->selectRaw("LEAST(100, GREATEST(0, (1 - ((embedding $operator ?) / 2)) * 100)) as match_percent", [$sourceEmbedding])
+            ->where('model_type', '=', $targetModelClass);
+
         if ($targetModelClass === get_class($this)) {
-            $query->where('model_id', '!=', $this->getKey());
+            $scores->where('model_id', '!=', $this->getKey());
         }
 
-        $matchingResultIds = $query->pluck('model_id');
+        $scores->orderBy('distance', 'asc')->take($topK);
 
-        return $targetModel->whereIn($targetModel->getKeyName(), $matchingResultIds)->get();
+        // Join scored ids with target model to include computed columns
+        $targetTable = $targetModel->getTable();
+        $qualifiedKey = $targetModel->getQualifiedKeyName();
+
+        return $targetModel->newQuery()
+            ->select($targetTable.'.*')
+            ->addSelect('scores.distance', 'scores.match_percent')
+            ->joinSub($scores->toBase(), 'scores', function ($join) use ($qualifiedKey) {
+                $join->on($qualifiedKey, '=', 'scores.model_id');
+            })
+            ->orderByDesc('scores.match_percent')
+            ->get();
     }
 }

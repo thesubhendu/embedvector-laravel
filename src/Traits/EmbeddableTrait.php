@@ -43,20 +43,32 @@ trait EmbeddableTrait
             throw new \InvalidArgumentException('Target model must implement EmbeddableContract');
         }
 
-        $embeddingsValue = DB::table('embeddings')
+        // Retrieve current model's embedding
+        $sourceEmbedding = Embedding::query()
             ->where('model_id', $this->getKey())
             ->where('model_type', get_class($this))
-            ->value('embedding');
+            ->first()?->embedding;
 
-        $matchingResultIds = Embedding::query()
-            ->nearestNeighbors(
-                'embedding',
-                $embeddingsValue,
-                Distance::L2
-            )
+        if (! $sourceEmbedding) {
+            return collect();
+        }
+
+        // Determine distance metric (default: cosine)
+        $distanceMetric = strtolower((string) config('embedvector.distance_metric', 'cosine')) === 'l2'
+            ? Distance::L2
+            : Distance::COSINE;
+
+        $query = Embedding::query()
+            ->nearestNeighbors('embedding', $sourceEmbedding, $distanceMetric)
             ->where('model_type', '=', $targetModelClass)
-            ->take($topK)
-            ->pluck('model_id');
+            ->take($topK);
+
+        // Exclude self when matching within the same model class
+        if ($targetModelClass === get_class($this)) {
+            $query->where('model_id', '!=', $this->getKey());
+        }
+
+        $matchingResultIds = $query->pluck('model_id');
 
         return $targetModel->whereIn($targetModel->getKeyName(), $matchingResultIds)->get();
     }

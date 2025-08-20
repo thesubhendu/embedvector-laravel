@@ -7,7 +7,7 @@ use Subhendu\EmbedVector\Models\Embedding;
 
 trait FireSyncEmbeddingTrait
 {
-    public static function bootFireSyncEmbeddingsTrait()
+    public static function bootFireSyncEmbeddingTrait()
     {
         static::saved(function (Model $model) {
             if (static::canFireEvent($model)) {

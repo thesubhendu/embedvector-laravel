@@ -35,13 +35,14 @@ readonly class ProcessCompletedBatchService
                 if (! $embeddingArray) {
                     continue;
                 }
-                $embeddingVector = new Vector($embeddingArray); // todo check if this is necessary
+                $embeddingVector = new Vector($embeddingArray);
 
                 if ($data) {
                     $embeddingsBatch[] = [
-                        'model_id' => $data['custom_id'], // todo see if this can be customized too, or recruiter_id is necessary like for bude case
-                        'embedding' => $embeddingVector->__toString(), // Store embedding as JSONB or text
+                        'model_id' => $data['custom_id'],
+                        'embedding' => $embeddingVector->__toString(),
                         'model_type' => $batch->embeddable_model,
+                        'embedding_sync_required' => false,
                     ];
 
                     if (count($embeddingsBatch) >= $batchSize) {
@@ -68,6 +69,6 @@ readonly class ProcessCompletedBatchService
 
     private function insertBatchIntoDatabase(EmbeddableContract $embeddableModel, array $embeddingsBatch): void
     {
-        DB::table('embeddings')->upsert($embeddingsBatch, ['model_id', 'model_type'], ['embedding']);
+        DB::table('embeddings')->upsert($embeddingsBatch, ['model_id', 'model_type'], ['embedding', 'embedding_sync_required']);
     }
 }

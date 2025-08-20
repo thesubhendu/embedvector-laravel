@@ -2,6 +2,9 @@
 
 return [
     'openai_api_key' => env('OPENAI_API_KEY', ''),
+    'embedding_model' => env('EMBEDVECTOR_MODEL', 'text-embedding-3-small'),
+    // cosine | l2
+    'distance_metric' => env('EMBEDVECTOR_DISTANCE', 'cosine'),
     'lot_size' => env('EMBEDVECTOR_LOT_SIZE', 50000), // openai limit of how many items processing/batch
     'chunk_size' => env('EMBEDVECTOR_CHUNK_SIZE', 500), // processes in 500 model chunk
     'directories' => [

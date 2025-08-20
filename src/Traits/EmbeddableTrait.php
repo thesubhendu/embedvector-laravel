@@ -43,21 +43,47 @@ trait EmbeddableTrait
             throw new \InvalidArgumentException('Target model must implement EmbeddableContract');
         }
 
-        $embeddingsValue = DB::table('embeddings')
+        // Retrieve current model's embedding
+        $sourceEmbedding = Embedding::query()
             ->where('model_id', $this->getKey())
             ->where('model_type', get_class($this))
-            ->value('embedding');
+            ->first()?->embedding;
 
-        $matchingResultIds = Embedding::query()
-            ->nearestNeighbors(
-                'embedding',
-                $embeddingsValue,
-                Distance::L2
-            )
-            ->where('model_type', '=', $targetModelClass)
-            ->take($topK)
-            ->pluck('model_id');
+        if (! $sourceEmbedding) {
+            return collect();
+        }
 
-        return $targetModel->whereIn($targetModel->getKeyName(), $matchingResultIds)->get();
+        // Determine distance metric (default: cosine) and corresponding operator
+        $distanceMetric = strtolower((string) config('embedvector.distance_metric', 'cosine')) === 'l2'
+            ? Distance::L2
+            : Distance::COSINE;
+
+        $operator = $distanceMetric === Distance::L2 ? '<->' : '<=>';
+
+        // Build scoring subquery with distance and match_percent
+        $scores = Embedding::query()
+            ->select('model_id')
+            ->selectRaw("(embedding $operator ?) as distance", [$sourceEmbedding])
+            ->selectRaw("LEAST(100, GREATEST(0, (1 - ((embedding $operator ?) / 2)) * 100)) as match_percent", [$sourceEmbedding])
+            ->where('model_type', '=', $targetModelClass);
+
+        if ($targetModelClass === get_class($this)) {
+            $scores->where('model_id', '!=', $this->getKey());
+        }
+
+        $scores->orderBy('distance', 'asc')->take($topK);
+
+        // Join scored ids with target model to include computed columns
+        $targetTable = $targetModel->getTable();
+        $qualifiedKey = $targetModel->getQualifiedKeyName();
+
+        return $targetModel->newQuery()
+            ->select($targetTable.'.*')
+            ->addSelect('scores.distance', 'scores.match_percent')
+            ->joinSub($scores->toBase(), 'scores', function ($join) use ($qualifiedKey) {
+                $join->on($qualifiedKey, '=', 'scores.model_id');
+            })
+            ->orderByDesc('scores.match_percent')
+            ->get();
     }
 }

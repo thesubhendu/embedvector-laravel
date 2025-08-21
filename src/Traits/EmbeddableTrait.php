@@ -42,13 +42,15 @@ trait EmbeddableTrait
         }
 
         // Retrieve current model's embedding
-        $sourceEmbedding = Embedding::query()
+        $sourceEmbeddingQuery = Embedding::query()
             ->where('model_id', $this->getKey())
-            ->where('model_type', get_class($this))
-            ->first()?->embedding;
+            ->where('model_type', get_class($this));
 
-        if (! $sourceEmbedding) {
-            $sourceEmbedding = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
+        $sourceEmbedding = $sourceEmbeddingQuery->first();
+
+        if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
+            $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
+            $sourceEmbedding = $sourceEmbeddingQuery->updateOrCreate(['model_id' => $this->getKey(), 'model_type' => get_class($this)], ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
         }
 
         // Determine distance metric (default: cosine) and corresponding operator
@@ -59,7 +61,7 @@ trait EmbeddableTrait
         $operator = $distanceMetric === Distance::L2 ? '<->' : '<=>';
 
         // Get embedding scores from PostgreSQL
-        $embeddingScores = $this->getEmbeddingScores($targetModelClass, $sourceEmbedding, $operator, $topK);
+        $embeddingScores = $this->getEmbeddingScores($targetModelClass, $sourceEmbedding->embedding, $operator, $topK);
 
         // Get target models from their respective database
         $modelIds = $embeddingScores->pluck('model_id')->toArray();

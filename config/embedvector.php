@@ -11,6 +11,10 @@ return [
         'input' => 'embeddings/input',
         'output' => 'embeddings/output',
     ],
+    // Database connection to use for storing embeddings
+    // Set to null to use the default application connection
+    // Useful for separating embeddings into a different PostgreSQL database
+    'database_connection' => env('EMBEDVECTOR_DB_CONNECTION', null),
     // Optionally add fields to check for syncing events:
     'model_fields_to_check' => [
         // Fully qualify your model classes and their fields here

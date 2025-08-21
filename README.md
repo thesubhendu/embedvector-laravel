@@ -1,97 +1,114 @@
-# Recommendation engine using Open AI embedding and PostgresSQL pgvector
+# EmbedVector Laravel Package
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/thesubhendu/recommender.svg?style=flat-square)](https://packagist.org/packages/thesubhendu/recommender)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/thesubhendu/recommender/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/thesubhendu/recommender/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/thesubhendu/recommender/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/thesubhendu/recommender/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/thesubhendu/recommender.svg?style=flat-square)](https://packagist.org/packages/thesubhendu/recommender)
+A Laravel package for handling OpenAI embeddings with batch processing capabilities.
 
-This package provides a recommendation engine using Open AI embedding and PostgresSQL pgvector. It uses the openai api to generate embeddings and stores them in the database. It then uses pgvector to search for similar embeddings.
+## Features
 
-> **⚠️ Notice:** This package is currently in development and not yet ready for production use. Please use at your own risk.
+- Batch embedding processing using OpenAI's batch API
+- Separate database connection support for vector operations
+- Automatic vector extension creation for PostgreSQL
+- Efficient batch processing with configurable chunk sizes
 
 ## Installation
 
+1. Install the package via Composer:
 ```bash
-composer require thesubhendu/embedvector-laravel
+composer require subhendu/embedvector-laravel
 ```
 
-You can publish and run the migrations with:
-
+2. Publish the configuration and migrations:
 ```bash
-php artisan vendor:publish --tag="recommender-migrations"
-php artisan migrate
+php artisan vendor:publish --provider="Subhendu\EmbedVector\EmbedVectorServiceProvider"
 ```
 
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --tag="embed-vector-config"
+3. Configure your environment variables:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+EMBEDVECTOR_MODEL=text-embedding-3-small
+EMBEDVECTOR_DISTANCE=cosine
+EMBEDVECTOR_LOT_SIZE=50000
+EMBEDVECTOR_CHUNK_SIZE=500
+EMBEDVECTOR_DB_CONNECTION=vector_db
 ```
 
-This is the contents of the published config file:
+## Database Configuration
 
+### Separate Database Connection (Recommended)
+
+For production use, it's recommended to use a separate database connection for vector operations. This package automatically creates the necessary vector extension and tables in the specified connection.
+
+1. Add a new database connection in your `config/database.php`:
 ```php
-return [
-    'openai_api_key' => env('OPENAI_API_KEY', ''),
-];
+'connections' => [
+    // ... your existing connections
+    
+    'vector_db' => [
+        'driver' => 'pgsql',
+        'host' => env('VECTOR_DB_HOST', '127.0.0.1'),
+        'port' => env('VECTOR_DB_PORT', '5432'),
+        'database' => env('VECTOR_DB_DATABASE', 'vector_db'),
+        'username' => env('VECTOR_DB_USERNAME', 'vector_user'),
+        'password' => env('VECTOR_DB_PASSWORD', ''),
+        'charset' => 'utf8',
+        'prefix' => '',
+        'prefix_indexes' => true,
+        'search_path' => 'public',
+        'sslmode' => 'prefer',
+    ],
+],
 ```
-Add your openai api key to the .env file as OPENAI_API_KEY
 
-To get api key login or signup at https://platform.openai.com/api-keys and create a new api key
+2. Set the connection in your `.env`:
+```env
+EMBEDVECTOR_DB_CONNECTION=vector_db
+```
+
+3. Run the migrations on the vector database:
+```bash
+php artisan migrate --database=vector_db
+```
+
+### Vector Extension
+
+The package automatically creates the `vector` extension in PostgreSQL when using a separate connection. This extension is required for vector operations and is created by the `2022_08_03_000000_create_vector_extension` migration.
 
 ## Usage
 
-Example: say you want to find AI matching jobs for the customer
-### Step 0: Prepare your model
-Implement EmbeddableContract to Eloquent model 
-use EmbeddableTrait
+### Basic Embedding
 
 ```php
-<?php
+use Subhendu\EmbedVector\Services\EmbeddingService;
 
-namespace App\Models;
-
-use Subhendu\EmbedVector\Contracts\EmbeddableContract;
-use Subhendu\EmbedVector\Traits\EmbeddableTrait;
-
-class Customer extends Model implements EmbeddableContract
-{
-    use EmbeddableTrait;
-}
+$embeddingService = app(EmbeddingService::class);
+$embedding = $embeddingService->createEmbedding('Your text here');
 ```
 
-Once model is ready run
-
-### Step 1:
-`php artisan embedding:batch {modelName} {--type=sync|init} {--force}`
-
-Example: `php artisan embedding:batch App\\Models\\Customer --type=init`
-
-This will generate a jsonl file in `storage/app/embeddings/` which is uploaded to openai api
-
-### Step 2:
-`php artisan process-completed-batch`
-
-This will process the embeddings  (generated in step 1) and store them in the database
-
-- Repeat step 1 and 2 with other models if needed
-
-### Step 3 :You can now search using the `matchingResults` method:
+### Batch Processing
 
 ```php
-$customer = Customer::find(1);
-$customer->matchingResults(Job::class);
+use Subhendu\EmbedVector\Services\BatchEmbeddingService;
+
+$batchService = app(BatchEmbeddingService::class);
+$batch = $batchService->createBatch(['text1', 'text2', 'text3']);
 ```
 
-## Testing
+## Commands
 
-```bash
-composer test
-```
+- `php artisan embedvector:batch` - Process batch embeddings
+- `php artisan embedvector:process-completed` - Process completed batch results
 
-## Credits
+## Configuration Options
 
-- [Subhendu Bhatta](https://github.com/thesubhendu)
-- [All Contributors](../../contributors)
+- `openai_api_key`: Your OpenAI API key
+- `embedding_model`: The embedding model to use (default: text-embedding-3-small)
+- `distance_metric`: Distance metric for similarity (cosine or l2)
+- `lot_size`: Maximum items per batch (OpenAI limit: 50,000)
+- `chunk_size`: Items processed per chunk (default: 500)
+- `database_connection`: Database connection for vector operations
+- `model_fields_to_check`: Fields to monitor for syncing events
+
+## Support
+
+For issues and questions, please check the package repository or create an issue.
 
 

@@ -15,4 +15,12 @@ class Embedding extends Model
     ];
 
     protected $guarded = [];
+
+    /**
+     * Get the database connection for the model.
+     */
+    public function getConnectionName(): ?string
+    {
+        return config('embedvector.database_connection') ?: $this->connection;
+    }
 }

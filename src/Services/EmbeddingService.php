@@ -2,8 +2,8 @@
 
 namespace Subhendu\EmbedVector\Services;
 
-use Pgvector\Laravel\Vector;
 use OpenAI\Contracts\ClientContract;
+use Pgvector\Laravel\Vector;
 
 class EmbeddingService
 {

@@ -8,6 +8,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Subhendu\EmbedVector\Commands\BatchEmbeddingCommand;
 use Subhendu\EmbedVector\Commands\ProcessCompletedEmbeddingsCommand;
+
 class EmbedVectorServiceProvider extends PackageServiceProvider
 {
     public function boot()

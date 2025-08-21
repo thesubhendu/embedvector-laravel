@@ -2,13 +2,12 @@
 
 namespace Subhendu\EmbedVector\Traits;
 
-use Pgvector\Laravel\Distance;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use Pgvector\Laravel\Distance;
+use Subhendu\EmbedVector\Contracts\EmbeddableContract;
 use Subhendu\EmbedVector\Models\Embedding;
 use Subhendu\EmbedVector\Services\EmbeddingService;
-use Subhendu\EmbedVector\Contracts\EmbeddableContract;
 
 trait EmbeddableTrait
 {
@@ -76,8 +75,10 @@ trait EmbeddableTrait
                 // Add distance and match_percent as dynamic properties
                 $model->distance = $score['distance'];
                 $model->match_percent = $score['match_percent'];
+
                 return $model;
             }
+
             return null;
         })->filter()->sortByDesc('match_percent')->values();
     }

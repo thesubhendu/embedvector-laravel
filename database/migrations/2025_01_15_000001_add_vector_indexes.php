@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 
 return new class extends Migration
 {
@@ -18,7 +18,7 @@ return new class extends Migration
     public function up(): void
     {
         $connection = $this->getConnection();
-        
+
         // Only run pgvector-specific statements on PostgreSQL
         if (DB::connection($connection)->getDriverName() === 'pgsql') {
             DB::connection($connection)->statement('CREATE EXTENSION IF NOT EXISTS vector');
@@ -33,7 +33,7 @@ return new class extends Migration
     public function down(): void
     {
         $connection = $this->getConnection();
-        
+
         if (DB::connection($connection)->getDriverName() === 'pgsql') {
             DB::connection($connection)->statement('DROP INDEX IF EXISTS embeddings_embedding_cosine_idx');
         }
@@ -43,5 +43,3 @@ return new class extends Migration
         });
     }
 };
-
-

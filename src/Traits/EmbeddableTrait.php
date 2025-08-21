@@ -46,9 +46,7 @@ trait EmbeddableTrait
             ->where('model_id', $this->getKey())
             ->where('model_type', get_class($this));
 
-
         $sourceEmbedding = $sourceEmbeddingQuery->first();
-
 
         if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
             $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());

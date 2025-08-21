@@ -56,7 +56,7 @@ trait EmbeddableTrait
         // Determine distance metric (default: cosine) and corresponding operator
         $distanceMetric = strtolower((string) config('embedvector.distance_metric', 'cosine')) === 'l2'
             ? Distance::L2
-            : Distance::COSINE;
+            : Distance::Cosine;
 
         $operator = $distanceMetric === Distance::L2 ? '<->' : '<=>';
 

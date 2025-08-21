@@ -33,9 +33,12 @@ class EmbedVectorServiceProvider extends PackageServiceProvider
         $package
             ->name('embedvector')
             ->hasConfigFile()
+            ->runsMigrations() // Auto-run migrations from package - NO PUBLISHING NEEDED
 //            ->hasViews()
+            ->hasMigration('2022_08_03_000000_create_vector_extension')
             ->hasMigration('2024_10_24_095247_create_embedding_batches_table')
             ->hasMigration('2025_01_05_090159_create_embeddings_table')
+            ->hasMigration('2025_01_15_000001_add_vector_indexes')
             ->hasCommands([BatchEmbeddingCommand::class, ProcessCompletedEmbeddingsCommand::class]);
     }
 }

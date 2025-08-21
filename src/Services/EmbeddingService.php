@@ -3,6 +3,7 @@
 namespace Subhendu\EmbedVector\Services;
 
 use OpenAI\Contracts\ClientContract;
+use Pgvector\Laravel\Vector;
 
 class EmbeddingService
 {
@@ -19,5 +20,21 @@ class EmbeddingService
     public function getClient(): ClientContract
     {
         return $this->openai;
+    }
+
+    public function generateEmbedding(string $text): Vector
+    {
+        $response = $this->openai->embeddings()->create([
+            'model' => $this->embeddingModel,
+            'input' => $text,
+        ]);
+
+        $embedding = $response->embeddings[0]->embedding ?? null;
+
+        if (! $embedding) {
+            throw new \Exception('No embedding found in response');
+        }
+
+        return new Vector($embedding);
     }
 }

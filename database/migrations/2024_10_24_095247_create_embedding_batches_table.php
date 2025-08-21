@@ -7,11 +7,19 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
+     * Get the migration connection name.
+     */
+    public function getConnection(): ?string
+    {
+        return config('embedvector.database_connection');
+    }
+
+    /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('embedding_batches', function (Blueprint $table) {
+        Schema::connection($this->getConnection())->create('embedding_batches', function (Blueprint $table) {
             $table->id();
             $table->string('batch_id')->unique();  // The batch ID returned by OpenAI
             $table->string('input_file_id');             // The file ID from the uploaded file
@@ -30,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('embedding_batches');
+        Schema::connection($this->getConnection())->dropIfExists('embedding_batches');
     }
 };

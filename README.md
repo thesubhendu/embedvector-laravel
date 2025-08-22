@@ -1,6 +1,6 @@
 # EmbedVector Laravel Package
 
-A Laravel package for handling OpenAI embeddings with batch processing capabilities.
+A Laravel package for handling OpenAI embeddings with batch processing capabilities and intelligent model contracts.
 
 ## Features
 
@@ -8,6 +8,8 @@ A Laravel package for handling OpenAI embeddings with batch processing capabilit
 - Separate database connection support for vector operations
 - Automatic vector extension creation for PostgreSQL
 - Efficient batch processing with configurable chunk sizes
+- **Dual Contract System**: Separate contracts for embedding generation and searchable models
+- **Smart Model Separation**: Models can be either embedding sources or searchable targets
 
 ## Installation
 
@@ -74,6 +76,18 @@ The package automatically creates the `vector` extension in PostgreSQL when usin
 
 ## Usage
 
+### Understanding the Contract System
+
+This package uses two distinct contracts to separate concerns:
+
+1. **`EmbeddableContract`** - For models that generate embeddings (e.g., Customer profiles)
+2. **`EmbeddingSearchableContract`** - For models that can be found using embeddings (e.g., Jobs)
+
+#### Example Use Case
+- **Customer** implements `EmbeddableContract` → generates embeddings for personalization
+- **Job** implements both contracts → can be embedded AND searched
+- Customer embeddings are used to find matching Jobs
+
 ### Basic Embedding
 
 ```php
@@ -82,6 +96,59 @@ use Subhendu\EmbedVector\Services\EmbeddingService;
 $embeddingService = app(EmbeddingService::class);
 $embedding = $embeddingService->createEmbedding('Your text here');
 ```
+
+### Implementing Contracts
+
+#### For Models That Generate Embeddings (e.g., Customer)
+
+```php
+use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Traits\EmbeddableTrait;
+
+class Customer extends Model implements EmbeddableContract
+{
+    use EmbeddableTrait;
+
+    public function toEmbeddingText(): string
+    {
+        return $this->name . ' ' . $this->department . ' ' . $this->skills;
+    }
+}
+```
+
+#### For Models That Can Be Searched (e.g., Job)
+
+```php
+use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
+use Subhendu\EmbedVector\Traits\EmbeddingSearchableTrait;
+
+class Job extends Model implements EmbeddingSearchableContract
+{
+    use EmbeddingSearchableTrait;
+    use HasFactory;
+
+    public function toEmbeddingText(): string
+    {
+        return $this->title . ' ' . $this->description . ' ' . $this->requirements;
+    }
+}
+```
+
+**Note**: `EmbeddingSearchableContract` extends `EmbeddableContract`, and `EmbeddingSearchableTrait` automatically includes `EmbeddableTrait` functionality, so you only need to use one trait.
+
+### Finding Matching Results
+
+```php
+// Find jobs that match a customer's profile
+$customer = Customer::find(1);
+$matchingJobs = $customer->matchingResults(JobVerified::class, 10);
+
+foreach ($matchingJobs as $job) {
+    echo "Job: {$job->title} - Match: {$job->match_percent}%";
+}
+```
+
+**Important**: The target model class (e.g., `JobVerified`) must implement `EmbeddingSearchableContract` to be searchable. If it doesn't, the method will throw an exception with a clear error message.
 
 ### Batch Processing
 
@@ -106,6 +173,23 @@ $batch = $batchService->createBatch(['text1', 'text2', 'text3']);
 - `chunk_size`: Items processed per chunk (default: 500)
 - `database_connection`: Database connection for vector operations
 - `model_fields_to_check`: Fields to monitor for syncing events
+
+## Typical Flow
+
+1. **Source Model** (Customer) generates embedding via `toEmbeddingText()`
+2. **Target Model** (Job) stores embeddings and provides search capabilities
+3. **Matching** occurs when source embeddings are used to find similar target models
+4. **Results** include similarity scores and match percentages
+
+### Contract Hierarchy
+
+- **`EmbeddableContract`**: Base contract for models that generate embeddings AND can find matches
+- **`EmbeddingSearchableContract`**: Extends `EmbeddableContract` for models that can also be searched/targeted
+
+### Trait Hierarchy
+
+- **`EmbeddableTrait`**: Provides embedding generation and matching functionality
+- **`EmbeddingSearchableTrait`**: Extends `EmbeddableTrait` and adds query/sync capabilities for searchable models
 
 ## Support
 

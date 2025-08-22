@@ -2,11 +2,13 @@
 
 namespace Subhendu\EmbedVector\Contracts;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * @method \Illuminate\Database\Eloquent\Builder query()
+ * Contract for models that can be converted to text embeddings.
+ * 
+ * Use this for models that generate embeddings (e.g., Customer profiles for personalization).
+ * These models are typically the "source" in embedding-based matching.
  */
 interface EmbeddableContract
 {
@@ -15,21 +17,18 @@ interface EmbeddableContract
      */
     public function toEmbeddingText(): string;
 
-    public function queryForEmbedding(): Builder;
-
-    public function queryForSyncing(): Builder;
-
     /**
-     * Gives matching $targetModelClass for the Model
-     *
-     * @param  string  $targetModelClass  Example. To search for Jobs for the customer Jobs are targetClass
-     * @param  int  $topK  number of top results
-     * @return Collection<int, EmbeddableContract>
-     */
-    public function matchingResults(string $targetModelClass, int $topK = 5): Collection;
-
-    /**
-     * custom id that is added to the embedding file for upload, this id is used to identify the model while processing the result file from openai
+     * Custom id that is added to the embedding file for upload.
+     * This id is used to identify the model while processing the result file from OpenAI.
      */
     public function getCustomId(): string;
+
+    /**
+     * Find matching models of the specified target class using embedding similarity.
+     *
+     * @param  string  $targetModelClass  The model class to search for (e.g., JobVerified::class)
+     * @param  int  $topK  Number of top results to return
+     * @return Collection<int, mixed>
+     */
+    public function matchingResults(string $targetModelClass, int $topK = 5): Collection;
 }

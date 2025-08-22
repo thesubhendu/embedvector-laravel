@@ -6,11 +6,12 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
 use Subhendu\EmbedVector\Models\EmbeddingBatch;
 
 readonly class BatchEmbeddingService
 {
-    private EmbeddableContract $embeddableModel;
+    private EmbeddingSearchableContract $embeddableModel;
 
     private Filesystem $disk;
 
@@ -24,6 +25,14 @@ readonly class BatchEmbeddingService
     ) {
         $this->disk = Storage::disk('local');
         $this->embeddableModel = app($embeddableModelName);
+
+        // Validate that the model implements EmbeddingSearchableContract
+        if (! $this->embeddableModel instanceof EmbeddingSearchableContract) {
+            throw new \InvalidArgumentException(
+                "Model class '{$embeddableModelName}' cannot be bulk embedded. " .
+                "Only models implementing EmbeddingSearchableContract can be bulk embedded for storage and retrieval."
+            );
+        }
 
         $this->uploadFilesDir = config('embedvector.directories.input').'/'.class_basename($this->embeddableModel).'/'.$type;
     }
@@ -90,7 +99,7 @@ readonly class BatchEmbeddingService
 
         $this->itemsToEmbedQuery()->chunkById($chunkSize, function ($models) use (&$jsonlContent, &$processedCount, &$batchCount) {
             foreach ($models as $model) {
-                /** @var \Subhendu\EmbedVector\Contracts\EmbeddableContract $model */
+                /** @var \Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract $model */
                 $jsonlContent .= $this->generateJsonLine($model)."\n";
                 $processedCount++;
 
@@ -113,7 +122,7 @@ readonly class BatchEmbeddingService
         }
     }
 
-    private function generateJsonLine(EmbeddableContract $model): string
+    private function generateJsonLine(EmbeddingSearchableContract $model): string
     {
         $data = [
             'custom_id' => $model->getCustomId(),

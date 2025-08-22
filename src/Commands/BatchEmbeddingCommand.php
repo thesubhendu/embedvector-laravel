@@ -9,7 +9,7 @@ use Subhendu\EmbedVector\Services\BatchEmbeddingService;
 
 class BatchEmbeddingCommand extends Command
 {
-    protected $signature = 'embedding:batch {modelName} {--type=sync} {--force}';
+    protected $signature = 'embedding:gen {model} {--type=sync} {--force}';
 
     protected $description = 'Generate a JSONL file for batch embedding';
 
@@ -26,7 +26,7 @@ class BatchEmbeddingCommand extends Command
      */
     public function handle(): void
     {
-        $modelClass = $this->argument('modelName');
+        $modelClass = $this->argument('model');
         $type = $this->option('type');
         $force = $this->option('force');
 

@@ -10,7 +10,7 @@ use Subhendu\EmbedVector\Services\ProcessCompletedBatchService;
 
 class ProcessCompletedEmbeddingsCommand extends Command
 {
-    protected $signature = 'process-completed-batch';
+    protected $signature = 'embedding:proc {--batch-id=} {--all}';
 
     protected $description = 'Process Completed Batches';
 
@@ -25,14 +25,33 @@ class ProcessCompletedEmbeddingsCommand extends Command
      */
     public function handle(ProcessCompletedBatchService $completedBatchService): void
     {
-        $batchesToCheck = EmbeddingBatch::whereIn('status', ['validating', 'finalizing', 'in_progress'])->get();
+        $batchId = $this->option('batch-id');
+        $processAll = $this->option('all');
 
-        $completedButUnprocessedBatches = EmbeddingBatch::where('status', 'completed')->get();
-
-        foreach ($completedButUnprocessedBatches as $completedBatch) {
-            $this->info('Retrying processing of already completed batches'.$completedBatch->id);
-            $completedBatchService->process($completedBatch);
+        if ($batchId) {
+            // Process specific batch
+            $batch = EmbeddingBatch::find($batchId);
+            if (!$batch) {
+                $this->error("Batch with ID {$batchId} not found.");
+                return;
+            }
+            
+            $this->processSingleBatch($batch, $completedBatchService);
+            return;
         }
+
+        if ($processAll) {
+            // Process all completed batches
+            $completedButUnprocessedBatches = EmbeddingBatch::where('status', 'completed')->get();
+            
+            foreach ($completedButUnprocessedBatches as $completedBatch) {
+                $this->info('Processing completed batch: ' . $completedBatch->id);
+                $completedBatchService->process($completedBatch);
+            }
+        }
+
+        // Check and process batches that might be ready
+        $batchesToCheck = EmbeddingBatch::whereIn('status', ['validating', 'finalizing', 'in_progress'])->get();
 
         foreach ($batchesToCheck as $batch) {
             $response = $this->embeddingService->getClient()->batches()->retrieve(id: $batch->batch_id);
@@ -64,7 +83,19 @@ class ProcessCompletedEmbeddingsCommand extends Command
                 $this->info('batch not completed, updating its latest status '.$batch->id);
             }
         }
+    }
 
+    private function processSingleBatch(EmbeddingBatch $batch, ProcessCompletedBatchService $completedBatchService): void
+    {
+        $this->info('Processing single batch: ' . $batch->id);
+        
+        if ($batch->status === 'completed') {
+            $this->info('Batch is already completed, processing...');
+            $completedBatchService->process($batch);
+        } else {
+            $this->info('Batch status: ' . $batch->status);
+            $this->info('This batch is not ready for processing yet.');
+        }
     }
 
     private function downloadAndSaveFile(EmbeddingBatch $batch, string $outputFileId): string

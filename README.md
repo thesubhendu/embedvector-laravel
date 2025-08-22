@@ -161,8 +161,36 @@ $batch = $batchService->createBatch(['text1', 'text2', 'text3']);
 
 ## Commands
 
-- `php artisan embedvector:batch` - Process batch embeddings
-- `php artisan embedvector:process-completed` - Process completed batch results
+- `php artisan embedding:gen {model} {--type=sync|init} {--force}` - Generate batch embeddings for a specific model
+- `php artisan embedding:proc {--batch-id=} {--all}` - Process completed batch results
+
+### Command Options
+
+#### `embedding:gen`
+- `{model}` - The model class name to generate embeddings for
+- `--type=sync` - Processing type (default: sync)
+- `--force` - Force overwrite existing files
+
+#### `embedding:proc`
+- `--batch-id=` - Process a specific batch by ID
+- `--all` - Process all completed batches
+- No options - Check and process batches that are ready (default behavior)
+
+### Usage Examples
+
+```bash
+# Generate embeddings for User model
+php artisan embedding:gen User --type=sync --force
+
+# Process a specific batch
+php artisan embedding:proc --batch-id=123
+
+# Process all completed batches
+php artisan embedding:proc --all
+
+# Check and process ready batches (default)
+php artisan embedding:proc
+```
 
 ## Configuration Options
 

@@ -2,13 +2,19 @@
 
 namespace Subhendu\EmbedVector\Traits;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Pgvector\Laravel\Distance;
 use Subhendu\EmbedVector\Contracts\EmbeddableContract;
+use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
 use Subhendu\EmbedVector\Models\Embedding;
 use Subhendu\EmbedVector\Services\EmbeddingService;
 
+/**
+ * Trait for models that can be converted to text embeddings.
+ * 
+ * Use this trait with EmbeddableContract for models that generate embeddings
+ * (e.g., Customer profiles for personalization).
+ */
 trait EmbeddableTrait
 {
     public function getCustomId(): string
@@ -16,29 +22,15 @@ trait EmbeddableTrait
         return (string) $this->getKey();
     }
 
-    public function queryForEmbedding(): Builder
-    {
-        return $this->query();
-    }
-
-    public function queryForSyncing(): Builder
-    {
-        // Get IDs of models that need syncing from the embeddings table
-        $modelsNeedingSync = Embedding::query()
-            ->where('model_type', get_class($this))
-            ->where('embedding_sync_required', true)
-            ->pluck('model_id');
-
-        // Return query for these models
-        return $this->query()->whereIn($this->getKeyName(), $modelsNeedingSync);
-    }
-
     public function matchingResults(string $targetModelClass, int $topK = 5): Collection
     {
         $targetModel = app($targetModelClass);
 
-        if (! $targetModel instanceof EmbeddableContract) {
-            throw new \InvalidArgumentException('Target model must implement EmbeddableContract');
+        if (! $targetModel instanceof EmbeddingSearchableContract) {
+            throw new \InvalidArgumentException(
+                "Model class '{$targetModelClass}' cannot be searched. " .
+                "Target model must implement EmbeddingSearchableContract to be searchable."
+            );
         }
 
         // Retrieve current model's embedding

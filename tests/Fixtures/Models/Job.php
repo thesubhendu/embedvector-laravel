@@ -4,12 +4,12 @@ namespace Subhendu\EmbedVector\Tests\Fixtures\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Subhendu\EmbedVector\Contracts\EmbeddableContract;
-use Subhendu\EmbedVector\Traits\EmbeddableTrait;
+use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
+use Subhendu\EmbedVector\Traits\EmbeddingSearchableTrait;
 
-class Job extends Model implements EmbeddableContract
+class Job extends Model implements EmbeddingSearchableContract
 {
-    use EmbeddableTrait;
+    use EmbeddingSearchableTrait;
     use HasFactory;
 
     public function toEmbeddingText(): string

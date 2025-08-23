@@ -15,7 +15,7 @@ A Laravel package for handling OpenAI embeddings with batch processing capabilit
 
 1. Install the package via Composer:
 ```bash
-composer require subhendu/embedvector-laravel
+composer require thesubhendu/embedvector-laravel
 ```
 
 2. Publish the configuration and migrations:
@@ -180,13 +180,10 @@ $batch = $batchService->createBatch(['text1', 'text2', 'text3']);
 
 ```bash
 # Generate embeddings for User model
-php artisan embedding:gen User --type=sync --force
+php artisan embedding:gen "App\\Models\\User" --type=sync 
 
 # Process a specific batch
 php artisan embedding:proc --batch-id=123
-
-# Process all completed batches
-php artisan embedding:proc --all
 
 # Check and process ready batches (default)
 php artisan embedding:proc

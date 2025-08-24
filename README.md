@@ -41,11 +41,39 @@ php artisan migrate
 
 ## Usage
 
+### Understanding the Contract System
+
+This package uses two distinct contracts to separate concerns based on the direction of matching:
+
+1. **`EmbeddableContract`** - For models that generate embeddings (e.g., Customer/Candidate profiles)
+2. **`EmbeddingSearchableContract`** - For models that can be found using embeddings (e.g., Jobs)
+
+#### Example Use Case: Job Matching for Candidates
+
+If system is designed to **find matching jobs for customers/candidates**, not the other way around:
+
+- **Customer/Candidate** implements `EmbeddableContract` → generates embeddings from their profile, skills, preferences
+- **Job** implements `EmbeddingSearchableContract` → can be found/recommended based on candidate embeddings
+- **Flow**: Customer embeddings are used to find relevant Jobs that match their profile
+
+
+**For Bidirectional Matching**: If you want both ways (finding jobs for candidates AND finding candidates for jobs), then both models need to implement `EmbeddingSearchableContract`.
+
+### Basic Embedding
+
+```php
+use Subhendu\EmbedVector\Services\EmbeddingService;
+
+$embeddingService = app(EmbeddingService::class);
+$embedding = $embeddingService->createEmbedding('Your text here');
+```
+
 ### Implementing Contracts
 
 #### For Models That Generate Embeddings (e.g., Customer)
 
 ```php
+use Illuminate\Database\Eloquent\Model;
 use Subhendu\EmbedVector\Contracts\EmbeddableContract;
 use Subhendu\EmbedVector\Traits\EmbeddableTrait;
 
@@ -63,6 +91,8 @@ class Customer extends Model implements EmbeddableContract
 #### For Models That Can Be Searched (e.g., Job)
 
 ```php
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
 use Subhendu\EmbedVector\Traits\EmbeddingSearchableTrait;
 
@@ -81,34 +111,12 @@ class Job extends Model implements EmbeddingSearchableContract
 **Note**: `EmbeddingSearchableContract` extends `EmbeddableContract`, and `EmbeddingSearchableTrait` automatically includes `EmbeddableTrait` functionality, so you only need to use one trait.
 
 
-### Understanding the Contract System
-
-This package uses two distinct contracts to separate concerns:
-
-1. **`EmbeddableContract`** - For models that generate embeddings (e.g., Customer profiles)
-2. **`EmbeddingSearchableContract`** - For models that can be found using embeddings (e.g., Jobs)
-
-#### Example Use Case
-- **Customer** implements `EmbeddableContract` → generates embeddings for personalization
-- **Job** implements both contracts → can be embedded AND searched
-- Customer embeddings are used to find matching Jobs
-
-### Basic Embedding
-
-```php
-use Subhendu\EmbedVector\Services\EmbeddingService;
-
-$embeddingService = app(EmbeddingService::class);
-$embedding = $embeddingService->createEmbedding('Your text here');
-```
-
-
 ### Finding Matching Results
 
 ```php
 // Find jobs that match a customer's profile
 $customer = Customer::find(1);
-$matchingJobs = $customer->matchingResults(JobVerified::class, 10);
+$matchingJobs = $customer->matchingResults(Job::class, 10);
 
 foreach ($matchingJobs as $job) {
     echo "Job: {$job->title} - Match: {$job->match_percent}%";
@@ -116,6 +124,8 @@ foreach ($matchingJobs as $job) {
 ```
 
 ### Batch Processing
+
+For processing large datasets efficiently, this package provides batch processing capabilities using OpenAI's batch API, which is more cost-effective for processing many embeddings at once.
 
 ## Commands
 

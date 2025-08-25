@@ -3,7 +3,6 @@
 namespace Subhendu\EmbedVector\Traits;
 
 use Illuminate\Database\Eloquent\Model;
-use Subhendu\EmbedVector\Models\Embedding;
 
 trait FireSyncEmbeddingTrait
 {
@@ -11,9 +10,7 @@ trait FireSyncEmbeddingTrait
     {
         static::saved(function (Model $model) {
             if (static::canFireEvent($model)) {
-                Embedding::where('model_id', $model->getKey())
-                    ->where('model_type', get_class($model))
-                    ->update(['embedding_sync_required' => true]);
+                $model->embedding()->update(['embedding_sync_required' => true]);
             }
         });
     }

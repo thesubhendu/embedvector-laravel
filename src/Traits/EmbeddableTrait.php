@@ -4,7 +4,6 @@ namespace Subhendu\EmbedVector\Traits;
 
 use Illuminate\Support\Collection;
 use Pgvector\Laravel\Distance;
-use Subhendu\EmbedVector\Contracts\EmbeddableContract;
 use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
 use Subhendu\EmbedVector\Models\Embedding;
 use Subhendu\EmbedVector\Services\EmbeddingService;
@@ -33,17 +32,7 @@ trait EmbeddableTrait
             );
         }
 
-        // Retrieve current model's embedding
-        $sourceEmbeddingQuery = Embedding::query()
-            ->where('model_id', $this->getKey())
-            ->where('model_type', get_class($this));
-
-        $sourceEmbedding = $sourceEmbeddingQuery->first();
-
-        if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
-            $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
-            $sourceEmbedding = $sourceEmbeddingQuery->updateOrCreate(['model_id' => $this->getKey(), 'model_type' => get_class($this)], ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
-        }
+        $sourceEmbedding = $this->getEmbedding();
 
         // Determine distance metric (default: cosine) and corresponding operator
         $distanceMetric = strtolower((string) config('embedvector.distance_metric', 'cosine')) === 'l2'
@@ -91,5 +80,27 @@ trait EmbeddableTrait
         }
 
         return $scores->orderBy('distance', 'asc')->take($topK)->get();
+    }
+
+    /**
+     * Get the embedding associated with this model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphOne
+     */
+    public function embedding()
+    {
+        return $this->morphOne(Embedding::class, 'model');
+    }
+
+    public function getEmbedding()
+    {
+        $sourceEmbedding = $this->embedding;
+
+        if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
+            $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
+            $sourceEmbedding = $this->embedding()->updateOrCreate([], ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
+        }
+
+        return $sourceEmbedding;
     }
 }

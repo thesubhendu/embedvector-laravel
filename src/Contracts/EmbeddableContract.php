@@ -28,7 +28,8 @@ interface EmbeddableContract
      *
      * @param  string  $targetModelClass  The model class to search for (e.g., JobVerified::class)
      * @param  int  $topK  Number of top results to return
+     * @param  \Closure|null  $queryFilter  Optional closure to apply filters to the target query
      * @return Collection<int, mixed>
      */
-    public function matchingResults(string $targetModelClass, int $topK = 5): Collection;
+    public function matchingResults(string $targetModelClass, int $topK = 5, ?\Closure $queryFilter = null): Collection;
 }

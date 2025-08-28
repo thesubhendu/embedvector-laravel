@@ -14,6 +14,14 @@ use Subhendu\EmbedVector\Tests\Fixtures\Models\Job;
 
 uses(RefreshDatabase::class);
 
+beforeEach(function () {
+    // Clean up any existing data for test isolation
+    Embedding::query()->delete();
+    EmbeddingBatch::query()->delete();
+    Job::query()->delete();
+    Customer::query()->delete();
+});
+
 it('generates jsonl file', function () {
     app()->bind(Client::class, fn () => new ClientFake([
         OpenAI\Responses\Files\CreateResponse::fake([
@@ -79,72 +87,60 @@ it('processes completed batch and inserts into database', function () {
 });
 
 it('gives correct matching results', closure: function () {
-    // Create models first to get their actual IDs
-    $jobs = Job::factory()->count(10)->create();
-    $customers = Customer::factory()->count(10)->create();
-
-    // Create embedding vectors with different patterns
-    $similarGroup1 = padVector([0.1, 0.2, 0.3]); // First group of similar vectors
-    $similarGroup2 = padVector([0.9, 0.8, 0.7]); // Second group (opposite direction for better separation)
-    $similarGroup3 = padVector([0.5, 0.5, 0.5]); // Third group (neutral)
-
-    // Create embeddings for customers (only customers need embeddings for searching)
-    foreach ($customers as $index => $customer) {
-        $vector = match (true) {
-            $index < 5 => $similarGroup1,
-            $index < 7 => $similarGroup2,
-            default => padVector([0.7, 0.8, 0.9 + ($index - 7) * 0.01])
-        };
-
-        // Check if embedding already exists to avoid duplicates
-        if (!Embedding::where('model_id', $customer->id)->where('model_type', Customer::class)->exists()) {
-            Embedding::create([
-                'model_id' => $customer->id,
-                'model_type' => Customer::class,
-                'embedding' => $vector,
-                'embedding_sync_required' => false,
-            ]);
-        }
-    }
-
-    // Create embeddings for jobs (jobs need embeddings to be found by customers)
-    foreach ($jobs as $index => $job) {
-        $vector = match (true) {
-            $index < 5 => $similarGroup1,
-            $index < 7 => $similarGroup2,
-            default => padVector([0.7, 0.8, 0.9 + ($index - 7) * 0.01])
-        };
-
-        // Check if embedding already exists to avoid duplicates
-        if (!Embedding::where('model_id', $job->id)->where('model_type', Job::class)->exists()) {
-            Embedding::create([
-                'model_id' => $job->id,
-                'model_type' => Job::class,
-                'embedding' => $vector,
-                'embedding_sync_required' => false,
-            ]);
-        }
-    }
-
-    // Test similar embeddings in group 1
-    $firstCustomer = $customers[0];
-
-    // Customer can search for matching Jobs (unidirectional matching)
-    $matchingJobs = $firstCustomer->matchingResults(Job::class);
+    // Create a simple test with just 2 jobs and 2 customers
+    $job1 = Job::factory()->create(['department' => 'Engineering']);
+    $job2 = Job::factory()->create(['department' => 'Marketing']);
     
-    expect($matchingJobs->first())->toBeInstanceOf(Job::class);
+    $customer1 = Customer::factory()->create(['department' => 'Engineering']);
+    $customer2 = Customer::factory()->create(['department' => 'Marketing']);
 
-    // Test that first 5 models match (they share similarGroup1 vector)
-    expect($matchingJobs->take(5)->pluck('id'))->toEqual($jobs->take(5)->pluck('id'));
+    // Create very distinct vectors
+    $engineeringVector = new Vector(array_fill(0, 1536, 1.0)); // All 1s
+    $marketingVector = new Vector(array_fill(0, 1536, -1.0)); // All -1s
 
-    // Test different group (similarGroup2)
-    $differentGroupCustomer = $customers[5];
+    // Create embeddings for jobs
+    Embedding::create([
+        'model_id' => $job1->id,
+        'model_type' => Job::class,
+        'embedding' => $engineeringVector,
+        'embedding_sync_required' => false,
+    ]);
 
-    $differentMatchingJobs = $differentGroupCustomer->matchingResults(Job::class);
+    Embedding::create([
+        'model_id' => $job2->id,
+        'model_type' => Job::class,
+        'embedding' => $marketingVector,
+        'embedding_sync_required' => false,
+    ]);
 
-    // Verify that we get matching results
-    expect($differentMatchingJobs)->not->toBeEmpty();
-    expect($differentMatchingJobs->first())->toBeInstanceOf(Job::class);
+    // Create embeddings for customers
+    Embedding::create([
+        'model_id' => $customer1->id,
+        'model_type' => Customer::class,
+        'embedding' => $engineeringVector,
+        'embedding_sync_required' => false,
+    ]);
+
+    Embedding::create([
+        'model_id' => $customer2->id,
+        'model_type' => Customer::class,
+        'embedding' => $marketingVector,
+        'embedding_sync_required' => false,
+    ]);
+
+    // Test that engineering customer finds engineering job first
+    $matchingJobs = $customer1->matchingResults(Job::class);
+    
+    expect($matchingJobs)->toHaveCount(2)
+        ->and($matchingJobs->first())->toBeInstanceOf(Job::class)
+        ->and($matchingJobs->first()->id)->toBe($job1->id); // Should find the similar engineering job first
+
+    // Test that marketing customer finds marketing job first
+    $marketingResults = $customer2->matchingResults(Job::class);
+    
+    expect($marketingResults)->toHaveCount(2)
+        ->and($marketingResults->first())->toBeInstanceOf(Job::class)
+        ->and($marketingResults->first()->id)->toBe($job2->id); // Should find the similar marketing job first
 });
 
 function padVector(array $vector, int $targetDimensions = 1536): array

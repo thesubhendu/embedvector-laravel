@@ -105,8 +105,8 @@ trait EmbeddableTrait
                     ->limit($topK)
                     ->get()
                     ->map(function ($model) {
-                        $model->distance = $model->getAttributes()['distance'] ?? null;
-                        $model->match_percent = $model->getAttributes()['match_percent'] ?? null;
+                        $model->distance = (float) ($model->getAttributes()['distance'] ?? 0);
+                        $model->match_percent = (float) ($model->getAttributes()['match_percent'] ?? 0);
                         return $model;
                     })
                     ->sortByDesc('match_percent')
@@ -147,8 +147,8 @@ trait EmbeddableTrait
             $model = $targetModels->get($score['model_id']);
             if ($model) {
                 // Add distance and match_percent as dynamic properties
-                $model->distance = $score['distance'];
-                $model->match_percent = $score['match_percent'];
+                $model->distance = (float) $score['distance'];
+                $model->match_percent = (float) $score['match_percent'];
                 return $model;
             }
 

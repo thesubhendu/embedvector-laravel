@@ -39,7 +39,7 @@ return new class extends Migration
         }
 
         Schema::connection($connection)->table('embeddings', function (Blueprint $table) {
-            $table->dropIndex(['model_type']);
+            $table->dropIndex('embeddings_model_type_index');
         });
     }
 };

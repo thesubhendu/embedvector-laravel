@@ -4,6 +4,7 @@ namespace Subhendu\EmbedVector\Services;
 
 use OpenAI\Contracts\ClientContract;
 use Pgvector\Laravel\Vector;
+use Subhendu\EmbedVector\Exceptions\EmbeddingException;
 
 class EmbeddingService
 {
@@ -32,7 +33,7 @@ class EmbeddingService
         $embedding = $response->embeddings[0]->embedding ?? null;
 
         if (! $embedding) {
-            throw new \Exception('No embedding found in response');
+            throw EmbeddingException::noEmbeddingFound();
         }
 
         return new Vector($embedding);

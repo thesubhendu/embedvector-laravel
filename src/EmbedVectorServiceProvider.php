@@ -8,6 +8,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Subhendu\EmbedVector\Commands\BatchEmbeddingCommand;
 use Subhendu\EmbedVector\Commands\ProcessCompletedEmbeddingsCommand;
+use Subhendu\EmbedVector\Exceptions\EmbeddingException;
 
 class EmbedVectorServiceProvider extends PackageServiceProvider
 {
@@ -15,7 +16,14 @@ class EmbedVectorServiceProvider extends PackageServiceProvider
     {
 
         $this->app->singleton(Client::class, function ($app) {
-            return OpenAI::client(config('embedvector.openai_api_key'));
+            $apiKey = config('embedvector.openai_api_key');
+
+            // Allow empty API key in testing environment
+            if (empty($apiKey) && ! $app->environment('testing')) {
+                throw EmbeddingException::invalidApiKey();
+            }
+
+            return OpenAI::client($apiKey ?: 'test-key');
         });
 
         $this->app->bind(OpenAI\Contracts\ClientContract::class, Client::class);

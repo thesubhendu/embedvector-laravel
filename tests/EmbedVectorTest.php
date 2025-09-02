@@ -31,7 +31,7 @@ it('generates jsonl file', function () {
             'status' => 'uploaded',
         ]),
         OpenAI\Responses\Batches\BatchResponse::fake([
-            'id' => 'testbatchid_' . uniqid(), // Make batch ID unique
+            'id' => 'testbatchid_'.uniqid(), // Make batch ID unique
             'object' => 'batch',
             'status' => 'validating',
         ]),
@@ -90,7 +90,7 @@ it('gives correct matching results', closure: function () {
     // Create a simple test with just 2 jobs and 2 customers
     $job1 = Job::factory()->create(['department' => 'Engineering']);
     $job2 = Job::factory()->create(['department' => 'Marketing']);
-    
+
     $customer1 = Customer::factory()->create(['department' => 'Engineering']);
     $customer2 = Customer::factory()->create(['department' => 'Marketing']);
 
@@ -130,14 +130,14 @@ it('gives correct matching results', closure: function () {
 
     // Test that engineering customer finds engineering job first
     $matchingJobs = $customer1->matchingResults(Job::class);
-    
+
     expect($matchingJobs)->toHaveCount(2)
         ->and($matchingJobs->first())->toBeInstanceOf(Job::class)
         ->and($matchingJobs->first()->id)->toBe($job1->id); // Should find the similar engineering job first
 
     // Test that marketing customer finds marketing job first
     $marketingResults = $customer2->matchingResults(Job::class);
-    
+
     expect($marketingResults)->toHaveCount(2)
         ->and($marketingResults->first())->toBeInstanceOf(Job::class)
         ->and($marketingResults->first()->id)->toBe($job2->id); // Should find the similar marketing job first

@@ -5,8 +5,8 @@ namespace Subhendu\EmbedVector\Services;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
-use Subhendu\EmbedVector\Contracts\EmbeddableContract;
 use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
+use Subhendu\EmbedVector\Exceptions\EmbeddingException;
 use Subhendu\EmbedVector\Models\EmbeddingBatch;
 
 readonly class BatchEmbeddingService
@@ -28,9 +28,9 @@ readonly class BatchEmbeddingService
 
         // Validate that the model implements EmbeddingSearchableContract
         if (! $this->embeddableModel instanceof EmbeddingSearchableContract) {
-            throw new \InvalidArgumentException(
-                "Model class '{$embeddableModelName}' cannot be bulk embedded. " .
-                "Only models implementing EmbeddingSearchableContract can be bulk embedded for storage and retrieval."
+            throw EmbeddingException::invalidModel(
+                $embeddableModelName,
+                EmbeddingSearchableContract::class
             );
         }
 
@@ -48,16 +48,29 @@ readonly class BatchEmbeddingService
 
     }
 
-    public function uploadFileForBatchEmbedding(string $fileToEmbed)
+    public function uploadFileForBatchEmbedding(string $fileToEmbed): \OpenAI\Responses\Batches\BatchResponse
     {
+        if (! file_exists($fileToEmbed)) {
+            throw EmbeddingException::fileOperationFailed('upload', $fileToEmbed, 'File does not exist');
+        }
+
         $client = $this->embeddingService->getClient();
 
-        $fileResponse = $client->files()->upload(
-            parameters: [
-                'purpose' => 'batch',
-                'file' => fopen($fileToEmbed, 'r'),
-            ]
-        );
+        $fileHandle = fopen($fileToEmbed, 'r');
+        if ($fileHandle === false) {
+            throw EmbeddingException::fileOperationFailed('upload', $fileToEmbed, 'Unable to open file for reading');
+        }
+
+        try {
+            $fileResponse = $client->files()->upload(
+                parameters: [
+                    'purpose' => 'batch',
+                    'file' => $fileHandle,
+                ]
+            );
+        } finally {
+            fclose($fileHandle);
+        }
 
         $fileId = $fileResponse->id;
 
@@ -76,7 +89,9 @@ readonly class BatchEmbeddingService
             'status' => 'validating',
         ]);
 
-        unlink($fileToEmbed);
+        if (! unlink($fileToEmbed)) {
+            throw EmbeddingException::fileOperationFailed('deletion', $fileToEmbed, 'Unable to delete temporary file');
+        }
 
         return $response;
     }
@@ -87,8 +102,10 @@ readonly class BatchEmbeddingService
     }
 
     /**
+     * Generates embedding file(s) to upload to OpenAI
+     *
+     * @param int|null $chunkSize Number of models to process per chunk
      * @return void
-     *              Generates embedding file(s) to upload to OpenAI
      */
     public function generateJsonLFile(?int $chunkSize = null): void
     {

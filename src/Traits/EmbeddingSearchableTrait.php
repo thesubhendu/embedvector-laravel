@@ -7,10 +7,10 @@ use Subhendu\EmbedVector\Models\Embedding;
 
 /**
  * Trait for models that can be searched and found using embeddings.
- * 
+ *
  * Use this trait with EmbeddingSearchableContract for models that can be both
  * embedded AND searched (e.g., Jobs that can be recommended).
- * 
+ *
  * This trait automatically includes EmbeddableTrait functionality.
  */
 trait EmbeddingSearchableTrait
@@ -33,6 +33,4 @@ trait EmbeddingSearchableTrait
         // Return query for these models
         return $this->query()->whereIn($this->getKeyName(), $modelsNeedingSync);
     }
-
-
 }

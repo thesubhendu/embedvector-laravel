@@ -4,6 +4,7 @@ namespace Subhendu\EmbedVector\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
+use Subhendu\EmbedVector\Exceptions\EmbeddingException;
 use Subhendu\EmbedVector\Models\EmbeddingBatch;
 use Subhendu\EmbedVector\Services\EmbeddingService;
 use Subhendu\EmbedVector\Services\ProcessCompletedBatchService;
@@ -31,21 +32,27 @@ class ProcessCompletedEmbeddingsCommand extends Command
         if ($batchId) {
             // Process specific batch
             $batch = EmbeddingBatch::find($batchId);
-            if (!$batch) {
+            if (! $batch) {
                 $this->error("Batch with ID {$batchId} not found.");
+
                 return;
             }
-            
-            $this->processSingleBatch($batch, $completedBatchService);
+
+            try {
+                $this->processSingleBatch($batch, $completedBatchService);
+            } catch (EmbeddingException $e) {
+                $this->error("Error processing batch {$batchId}: ".$e->getMessage());
+            }
+
             return;
         }
 
         if ($processAll) {
             // Process all completed batches
             $completedButUnprocessedBatches = EmbeddingBatch::where('status', 'completed')->get();
-            
+
             foreach ($completedButUnprocessedBatches as $completedBatch) {
-                $this->info('Processing completed batch: ' . $completedBatch->id);
+                $this->info('Processing completed batch: '.$completedBatch->id);
                 $completedBatchService->process($completedBatch);
             }
         }
@@ -87,13 +94,13 @@ class ProcessCompletedEmbeddingsCommand extends Command
 
     private function processSingleBatch(EmbeddingBatch $batch, ProcessCompletedBatchService $completedBatchService): void
     {
-        $this->info('Processing single batch: ' . $batch->id);
-        
+        $this->info('Processing single batch: '.$batch->id);
+
         if ($batch->status === 'completed') {
             $this->info('Batch is already completed, processing...');
             $completedBatchService->process($batch);
         } else {
-            $this->info('Batch status: ' . $batch->status);
+            $this->info('Batch status: '.$batch->status);
             $this->info('This batch is not ready for processing yet.');
         }
     }
@@ -102,7 +109,15 @@ class ProcessCompletedEmbeddingsCommand extends Command
     {
         $filePath = config('embedvector.directories.output').'/output_embeddings_'.$batch->id.'.jsonl';
 
-        Storage::disk('local')->put($filePath, $this->embeddingService->getClient()->files()->download($outputFileId));
+        try {
+            $content = $this->embeddingService->getClient()->files()->download($outputFileId);
+
+            if (! Storage::disk('local')->put($filePath, $content)) {
+                throw EmbeddingException::fileOperationFailed('save', $filePath, 'Unable to save downloaded file');
+            }
+        } catch (\Exception $e) {
+            throw EmbeddingException::fileOperationFailed('download', $outputFileId, $e->getMessage());
+        }
 
         $batch->saved_file_path = $filePath;
         $batch->output_file_id = $outputFileId;

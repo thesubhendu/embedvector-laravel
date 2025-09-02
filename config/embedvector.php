@@ -5,7 +5,7 @@ return [
     'embedding_model' => env('EMBEDVECTOR_MODEL', 'text-embedding-3-small'),
     // cosine | l2
     'distance_metric' => env('EMBEDVECTOR_DISTANCE', 'cosine'),
-    
+
     // Search strategy: auto | optimized | cross_connection
     // auto: Automatically detect and choose optimal strategy (recommended)
     // optimized: Always use JOIN-based query (requires same DB connection)

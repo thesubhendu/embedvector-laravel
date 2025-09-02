@@ -6,7 +6,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Contract for models that can be converted to text embeddings.
- * 
+ *
  * Use this for models that generate embeddings (e.g., Customer profiles for personalization).
  * These models are typically the "source" in embedding-based matching.
  */

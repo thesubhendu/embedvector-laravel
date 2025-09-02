@@ -5,12 +5,13 @@ namespace Subhendu\EmbedVector\Traits;
 use Illuminate\Support\Collection;
 use Pgvector\Laravel\Distance;
 use Subhendu\EmbedVector\Contracts\EmbeddingSearchableContract;
+use Subhendu\EmbedVector\Exceptions\EmbeddingException;
 use Subhendu\EmbedVector\Models\Embedding;
 use Subhendu\EmbedVector\Services\EmbeddingService;
 
 /**
  * Trait for models that can be converted to text embeddings.
- * 
+ *
  * Use this trait with EmbeddableContract for models that generate embeddings
  * (e.g., Customer profiles for personalization).
  */
@@ -26,9 +27,9 @@ trait EmbeddableTrait
         $targetModel = app($targetModelClass);
 
         if (! $targetModel instanceof EmbeddingSearchableContract) {
-            throw new \InvalidArgumentException(
-                "Model class '{$targetModelClass}' cannot be searched. " .
-                "Target model must implement EmbeddingSearchableContract to be searchable."
+            throw EmbeddingException::invalidModel(
+                $targetModelClass,
+                EmbeddingSearchableContract::class
             );
         }
 
@@ -43,21 +44,21 @@ trait EmbeddableTrait
 
         // Choose strategy based on configuration
         $strategy = config('embedvector.search_strategy', 'auto');
-        
+
         switch ($strategy) {
             case 'optimized':
                 return $this->getMatchingResultsOptimized($targetModel, $sourceEmbedding->embedding, $operator, $topK, $queryFilter);
-                
+
             case 'cross_connection':
                 return $this->getMatchingResultsCrossConnection($targetModel, $sourceEmbedding->embedding, $operator, $topK, $queryFilter);
-                
+
             case 'auto':
             default:
                 // Auto-detect if models are on the same database connection
                 if ($this->isSameConnection($targetModel)) {
                     return $this->getMatchingResultsOptimized($targetModel, $sourceEmbedding->embedding, $operator, $topK, $queryFilter);
                 }
-                
+
                 // Fallback to cross-connection approach for different databases
                 return $this->getMatchingResultsCrossConnection($targetModel, $sourceEmbedding->embedding, $operator, $topK, $queryFilter);
         }
@@ -65,28 +66,38 @@ trait EmbeddableTrait
 
     /**
      * Check if the target model is on the same database connection as embeddings.
+     *
+     * @param \Illuminate\Database\Eloquent\Model $targetModel
+     * @return bool
      */
     protected function isSameConnection($targetModel): bool
     {
-        $embeddingConnection = (new Embedding())->getConnectionName();
+        $embeddingConnection = (new Embedding)->getConnectionName();
         $targetConnection = $targetModel->getConnectionName();
-        
+
         return $embeddingConnection === $targetConnection;
     }
 
     /**
      * Optimized matching for same database connection using JOIN.
+     *
+     * @param \Illuminate\Database\Eloquent\Model $targetModel
+     * @param mixed $sourceEmbedding
+     * @param string $operator
+     * @param int $topK
+     * @param \Closure|null $queryFilter
+     * @return Collection
      */
     protected function getMatchingResultsOptimized($targetModel, $sourceEmbedding, string $operator, int $topK, ?\Closure $queryFilter = null): Collection
     {
         $targetTable = $targetModel->getTable();
         $targetKeyName = $targetModel->getKeyName();
-        $embeddingTable = (new Embedding())->getTable();
-        
+        $embeddingTable = (new Embedding)->getTable();
+
         $query = $targetModel->newQuery()
             ->join($embeddingTable, function ($join) use ($targetTable, $targetKeyName, $embeddingTable, $targetModel) {
                 $join->on("{$embeddingTable}.model_id", '=', "{$targetTable}.{$targetKeyName}")
-                     ->where("{$embeddingTable}.model_type", '=', get_class($targetModel));
+                    ->where("{$embeddingTable}.model_type", '=', get_class($targetModel));
             })
             ->selectRaw("{$targetTable}.*")
             ->selectRaw("({$embeddingTable}.embedding $operator ?) as distance", [$sourceEmbedding])
@@ -102,19 +113,27 @@ trait EmbeddableTrait
         }
 
         return $query->orderBy('distance', 'asc')
-                    ->limit($topK)
-                    ->get()
-                    ->map(function ($model) {
-                        $model->distance = (float) ($model->getAttributes()['distance'] ?? 0);
-                        $model->match_percent = (float) ($model->getAttributes()['match_percent'] ?? 0);
-                        return $model;
-                    })
-                    ->sortByDesc('match_percent')
-                    ->values();
+            ->limit($topK)
+            ->get()
+            ->map(function ($model) {
+                $model->distance = (float) ($model->getAttributes()['distance'] ?? 0);
+                $model->match_percent = (float) ($model->getAttributes()['match_percent'] ?? 0);
+
+                return $model;
+            })
+            ->sortByDesc('match_percent')
+            ->values();
     }
 
     /**
      * Cross-connection matching for different databases (current approach).
+     *
+     * @param \Illuminate\Database\Eloquent\Model $targetModel
+     * @param mixed $sourceEmbedding
+     * @param string $operator
+     * @param int $topK
+     * @param \Closure|null $queryFilter
+     * @return Collection
      */
     protected function getMatchingResultsCrossConnection($targetModel, $sourceEmbedding, string $operator, int $topK, ?\Closure $queryFilter = null): Collection
     {
@@ -130,10 +149,9 @@ trait EmbeddableTrait
                 return collect();
             }
         }
-        
+
         // Get embedding scores from PostgreSQL, optionally restricted to valid IDs
         $embeddingScores = $this->getEmbeddingScores(get_class($targetModel), $sourceEmbedding, $operator, $topK, $validModelIds);
-
 
         // Get target models from their respective database
         $modelIds = $embeddingScores->pluck('model_id')->toArray();
@@ -149,6 +167,7 @@ trait EmbeddableTrait
                 // Add distance and match_percent as dynamic properties
                 $model->distance = (float) $score['distance'];
                 $model->match_percent = (float) $score['match_percent'];
+
                 return $model;
             }
 
@@ -156,6 +175,16 @@ trait EmbeddableTrait
         })->filter()->sortByDesc('match_percent')->values();
     }
 
+    /**
+     * Get embedding scores from the database.
+     *
+     * @param string $targetModelClass
+     * @param mixed $sourceEmbedding
+     * @param string $operator
+     * @param int $topK
+     * @param array|null $validModelIds
+     * @return Collection
+     */
     protected function getEmbeddingScores(string $targetModelClass, $sourceEmbedding, string $operator, int $topK, ?array $validModelIds = null): Collection
     {
         // Build scoring query using PostgreSQL connection
@@ -170,11 +199,10 @@ trait EmbeddableTrait
             $scores->whereIn('model_id', $validModelIds);
         }
 
-
         if ($targetModelClass === get_class($this)) {
             $scores->where('model_id', '!=', $this->getKey());
         }
-        
+
         return $scores->take($topK)->get();
     }
 
@@ -188,7 +216,12 @@ trait EmbeddableTrait
         return $this->morphOne(Embedding::class, 'model');
     }
 
-    public function getEmbedding()
+    /**
+     * Get or create embedding for this model.
+     *
+     * @return Embedding
+     */
+    public function getEmbedding(): Embedding
     {
         $sourceEmbedding = $this->embedding;
 

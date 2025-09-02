@@ -19,31 +19,31 @@ beforeEach(function () {
 describe('Embedding Model', function () {
     it('uses correct database connection from config', function () {
         Config::set('embedvector.database_connection', 'testing');
-        
-        $embedding = new Embedding();
-        
+
+        $embedding = new Embedding;
+
         expect($embedding->getConnectionName())->toBe('testing');
-        
+
         Config::set('embedvector.database_connection', 'pgsql'); // Reset
     });
 
     it('casts embedding to Vector correctly', function () {
         $vector = new Vector(array_fill(0, 1536, 0.1));
-        
+
         $embedding = Embedding::create([
             'model_id' => 1,
             'model_type' => 'TestModel',
             'embedding' => $vector,
             'embedding_sync_required' => false,
         ]);
-        
+
         expect($embedding->embedding)->toBeInstanceOf(Vector::class)
             ->and($embedding->embedding->toArray())->toHaveCount(1536);
     });
 
     it('establishes morphTo relationship properly', function () {
-        $embedding = new Embedding();
-        
+        $embedding = new Embedding;
+
         expect($embedding->model())->toBeInstanceOf(\Illuminate\Database\Eloquent\Relations\MorphTo::class);
     });
 
@@ -54,11 +54,11 @@ describe('Embedding Model', function () {
             'embedding' => new Vector(array_fill(0, 1536, 0.1)),
             'embedding_sync_required' => true,
         ]);
-        
+
         expect($embedding->embedding_sync_required)->toBeTrue();
-        
+
         $embedding->update(['embedding_sync_required' => false]);
-        
+
         expect($embedding->fresh()->embedding_sync_required)->toBeFalse();
     });
 });
@@ -66,11 +66,11 @@ describe('Embedding Model', function () {
 describe('EmbeddingBatch Model', function () {
     it('uses correct database connection from config', function () {
         Config::set('embedvector.database_connection', 'testing');
-        
-        $batch = new EmbeddingBatch();
-        
+
+        $batch = new EmbeddingBatch;
+
         expect($batch->getConnectionName())->toBe('testing');
-        
+
         Config::set('embedvector.database_connection', 'pgsql'); // Reset
     });
 
@@ -81,7 +81,7 @@ describe('EmbeddingBatch Model', function () {
             'embeddable_model' => 'TestModel',
             'status' => 'validating',
         ]);
-        
+
         expect($batch->batch_id)->toBe('test-batch-123')
             ->and($batch->input_file_id)->toBe('file-123')
             ->and($batch->embeddable_model)->toBe('TestModel')
@@ -95,28 +95,28 @@ describe('EmbeddingBatch Model', function () {
             'embeddable_model' => 'TestModel',
             'status' => 'validating',
         ]);
-        
+
         $batch->update(['status' => 'completed']);
-        
+
         expect($batch->fresh()->status)->toBe('completed');
     });
 });
 
 describe('Job Model with EmbeddingSearchableContract', function () {
     it('implements required contract methods', function () {
-        $job = new Job();
-        
+        $job = new Job;
+
         expect(method_exists($job, 'toEmbeddingText'))->toBeTrue()
             ->and(method_exists($job, 'matchingResults'))->toBeTrue();
     });
 
     it('generates embedding text correctly', function () {
         $job = Job::factory()->create([
-            'department' => 'Engineering'
+            'department' => 'Engineering',
         ]);
-        
+
         $embeddingText = $job->toEmbeddingText();
-        
+
         expect($embeddingText)->toContain('Engineering');
     });
 });

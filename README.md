@@ -113,6 +113,8 @@ class Job extends Model implements EmbeddingSearchableContract
 
 ### Finding Matching Results
 
+#### Basic Usage
+
 ```php
 // Find jobs that match a customer's profile
 $customer = Customer::find(1);
@@ -120,8 +122,74 @@ $matchingJobs = $customer->matchingResults(Job::class, 10);
 
 foreach ($matchingJobs as $job) {
     echo "Job: {$job->title} - Match: {$job->match_percent}%";
+    echo "Distance: {$job->distance}";
 }
 ```
+
+#### Advanced Usage with Filters
+
+You can add query filters to narrow down the search results before embedding similarity is calculated:
+
+```php
+// Find only active jobs in specific locations
+$customer = Customer::find(1);
+$matchingJobs = $customer->matchingResults(
+    targetModelClass: Job::class,
+    topK: 10,
+    queryFilter: function ($query) {
+        $query->where('status', 'active')
+              ->whereIn('location', ['New York', 'San Francisco'])
+              ->where('salary', '>=', 80000);
+    }
+);
+```
+
+#### Method Parameters
+
+- **`targetModelClass`** (string): The class name of the model you want to find matches for
+- **`topK`** (int, default: 5): Maximum number of results to return
+- **`queryFilter`** (Closure, optional): Custom query constraints to apply before similarity matching
+
+#### Return Properties
+
+Each returned model includes additional properties:
+- **`match_percent`** (float): Similarity percentage (0-100, higher is better)
+- **`distance`** (float): Vector distance (lower is better for similarity)
+
+## Configuration
+
+The package publishes a configuration file to `config/embedvector.php` with the following options:
+
+```php
+return [
+    'openai_api_key' => env('OPENAI_API_KEY', ''),
+    'embedding_model' => env('EMBEDVECTOR_MODEL', 'text-embedding-3-small'),
+    'distance_metric' => env('EMBEDVECTOR_DISTANCE', 'cosine'), // cosine | l2
+    'search_strategy' => env('EMBEDVECTOR_SEARCH_STRATEGY', 'auto'), // auto | optimized | cross_connection
+    'lot_size' => env('EMBEDVECTOR_LOT_SIZE', 50000),
+    'chunk_size' => env('EMBEDVECTOR_CHUNK_SIZE', 500),
+    'directories' => [
+        'input' => 'embeddings/input',
+        'output' => 'embeddings/output',
+    ],
+    'database_connection' => env('EMBEDVECTOR_DB_CONNECTION', 'pgsql'),
+];
+```
+
+### Configuration Options Explained
+
+- **`openai_api_key`**: Your OpenAI API key (required in production)
+- **`embedding_model`**: OpenAI embedding model to use (text-embedding-3-small, text-embedding-3-large, etc.)
+- **`distance_metric`**: Vector similarity calculation method
+  - `cosine`: Better for semantic similarity (recommended)
+  - `l2`: Euclidean distance for geometric similarity
+- **`search_strategy`**: How to perform similarity searches
+  - `auto`: Automatically choose the best strategy (recommended)
+  - `optimized`: Use JOIN-based queries (same database only)
+  - `cross_connection`: Two-step approach (works across different databases)
+- **`lot_size`**: Maximum items per OpenAI batch (up to 50,000)
+- **`chunk_size`**: Items processed per chunk during batch generation
+- **`database_connection`**: PostgreSQL connection for vector operations
 
 ### Batch Processing
 
@@ -147,11 +215,334 @@ For processing large datasets efficiently, this package provides batch processin
 ### Usage Examples
 
 ```bash
-# Generate embeddings for User model
-php artisan embedding:gen "App\\Models\\User" --type=sync 
+# Generate embeddings for User model (init = first time, sync = update existing)
+php artisan embedding:gen "App\\Models\\User" --type=init
+
+# Generate embeddings for sync (only models that need updates)
+php artisan embedding:gen "App\\Models\\Job" --type=sync
 
 # Check and process ready batches (default)
 php artisan embedding:proc
+
+# Process all completed batches
+php artisan embedding:proc --all
+
+# Process specific batch
+php artisan embedding:proc --batch-id=batch_abc123
 ```
+
+## Real-World Examples
+
+### E-commerce Product Recommendations
+
+```php
+// Product model (searchable)
+class Product extends Model implements EmbeddingSearchableContract
+{
+    use EmbeddingSearchableTrait;
+
+    public function toEmbeddingText(): string
+    {
+        return $this->name . ' ' . $this->description . ' ' . $this->category . ' ' . $this->tags;
+    }
+}
+
+// User model (generates embeddings from purchase history)
+class User extends Model implements EmbeddableContract
+{
+    use EmbeddableTrait;
+
+    public function toEmbeddingText(): string
+    {
+        $purchaseHistory = $this->orders()
+            ->with('products')
+            ->get()
+            ->flatMap->products
+            ->pluck('name')
+            ->implode(' ');
+            
+        return $this->preferences . ' ' . $purchaseHistory;
+    }
+}
+
+// Find recommended products for a user
+$user = User::find(1);
+$recommendations = $user->matchingResults(
+    targetModelClass: Product::class,
+    topK: 20,
+    queryFilter: function ($query) {
+        $query->where('in_stock', true)
+              ->where('price', '<=', 500)
+              ->whereNotIn('id', auth()->user()->purchased_product_ids);
+    }
+);
+```
+
+### Job Matching Platform
+
+```php
+// Find jobs for a candidate with filters
+$candidate = Candidate::find(1);
+$matchingJobs = $candidate->matchingResults(
+    targetModelClass: Job::class,
+    topK: 15,
+    queryFilter: function ($query) use ($candidate) {
+        $query->where('status', 'open')
+              ->where('remote_allowed', $candidate->prefers_remote)
+              ->whereIn('experience_level', $candidate->acceptable_levels)
+              ->where('salary_min', '>=', $candidate->min_salary);
+    }
+);
+
+foreach ($matchingJobs as $job) {
+    echo "Match: {$job->match_percent}% - {$job->title} at {$job->company}";
+}
+```
+
+### Content Recommendation System
+
+```php
+// Article model
+class Article extends Model implements EmbeddingSearchableContract
+{
+    use EmbeddingSearchableTrait;
+
+    public function toEmbeddingText(): string
+    {
+        return $this->title . ' ' . $this->summary . ' ' . $this->tags . ' ' . $this->category;
+    }
+}
+
+// User reading history model
+class UserProfile extends Model implements EmbeddableContract
+{
+    use EmbeddableTrait;
+
+    public function toEmbeddingText(): string
+    {
+        $readingHistory = $this->user->readArticles()
+            ->selectRaw('GROUP_CONCAT(title, " ", summary) as content')
+            ->value('content');
+            
+        return $this->interests . ' ' . $readingHistory;
+    }
+}
+
+// Get personalized article recommendations
+$profile = UserProfile::where('user_id', auth()->id())->first();
+$recommendations = $profile->matchingResults(
+    targetModelClass: Article::class,
+    topK: 10,
+    queryFilter: function ($query) use ($profile) {
+        $query->where('published', true)
+              ->where('created_at', '>=', now()->subDays(7))
+              ->whereNotIn('id', $profile->user->read_article_ids);
+    }
+);
+```
+
+## Best Practices
+
+### 1. Optimize Your `toEmbeddingText()` Method
+
+```php
+public function toEmbeddingText(): string
+{
+    // ✅ Good: Concise, relevant information
+    return trim($this->title . ' ' . $this->description . ' ' . $this->tags);
+    
+    // ❌ Avoid: Too much noise or irrelevant data
+    // return $this->created_at . ' ' . $this->id . ' ' . $this->long_legal_text;
+}
+```
+
+### 2. Use Appropriate Filters
+
+```php
+// ✅ Good: Filter before similarity calculation
+$matches = $user->matchingResults(
+    Product::class,
+    10,
+    fn($q) => $q->where('available', true)->where('price', '<=', $budget)
+);
+
+// ❌ Less efficient: Filtering after embedding calculation
+$allMatches = $user->matchingResults(Product::class, 100);
+$filtered = $allMatches->where('available', true);
+```
+
+### 3. Manage Embedding Sync
+
+```php
+// Trigger re-embedding when relevant data changes
+class Job extends Model implements EmbeddingSearchableContract 
+{
+    use EmbeddingSearchableTrait;
+    
+    protected static function booted()
+    {
+        static::updated(function ($job) {
+            if ($job->isDirty(['title', 'description', 'requirements'])) {
+                $job->embedding()->update(['embedding_sync_required' => true]);
+            }
+        });
+    }
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"No embedding found in response"**
+   - Check your OpenAI API key is valid
+   - Verify the embedding model exists
+   - Ensure your `toEmbeddingText()` returns non-empty strings
+
+2. **"Model class must implement EmbeddingSearchableContract"**
+   - Target models must implement `EmbeddingSearchableContract`
+   - Source models only need `EmbeddableContract`
+
+3. **Poor matching results**
+   - Review your `toEmbeddingText()` method - it should contain relevant, semantic information
+   - Consider using `cosine` distance for semantic similarity
+   - Try different embedding models (text-embedding-3-large for better quality)
+
+4. **Performance issues**
+   - Use batch processing for large datasets
+   - Consider using `optimized` search strategy for same-database scenarios
+   - Add appropriate database indexes
+
+### Database Performance
+
+```sql
+-- Add indexes for better performance
+CREATE INDEX IF NOT EXISTS embeddings_model_type_idx ON embeddings (model_type);
+CREATE INDEX IF NOT EXISTS embeddings_sync_required_idx ON embeddings (embedding_sync_required);
+```
+
+## Environment Variables Reference
+
+Add these to your `.env` file:
+
+```env
+# Required
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional - Customize behavior
+EMBEDVECTOR_MODEL=text-embedding-3-small
+EMBEDVECTOR_DISTANCE=cosine
+EMBEDVECTOR_SEARCH_STRATEGY=auto
+EMBEDVECTOR_LOT_SIZE=50000
+EMBEDVECTOR_CHUNK_SIZE=500
+EMBEDVECTOR_DB_CONNECTION=pgsql
+```
+
+## Architecture Overview
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Source Model  │    │  Target Model   │    │   Embeddings    │
+│ (EmbeddableContract)  │ (EmbeddingSearchableContract) │    │    Table       │
+│                 │    │                 │    │                 │
+│ • Customer      │───▶│ • Job           │◀──│ • Vector data   │
+│ • User Profile  │    │ • Product       │   │ • Similarity    │
+│ • Candidate     │    │ • Article       │   │   calculations  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ toEmbeddingText()│    │ toEmbeddingText()│    │  PostgreSQL     │
+│ • Generate text │    │ • Generate text │    │  with pgvector  │
+│   for embedding │    │   for embedding │    │  extension      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+## API Reference
+
+### EmbeddableTrait Methods
+
+#### `matchingResults(string $targetModelClass, int $topK = 5, ?Closure $queryFilter = null): Collection`
+
+Find models similar to the current model.
+
+**Parameters:**
+- `$targetModelClass`: Fully qualified class name of the target model
+- `$topK`: Maximum number of results (default: 5)
+- `$queryFilter`: Optional closure to filter results before similarity calculation
+
+**Returns:** Collection of models with `match_percent` and `distance` properties
+
+#### `getEmbedding(): Embedding`
+
+Get or create the embedding for the current model.
+
+**Returns:** Embedding model instance
+
+#### `embedding(): MorphOne`
+
+Eloquent relationship to the embedding record.
+
+**Returns:** MorphOne relationship
+
+### EmbeddingSearchableTrait Methods
+
+#### `queryForEmbedding(): Builder`
+
+Get the base query for models to be embedded during initial processing.
+
+**Returns:** Eloquent Builder instance
+
+#### `queryForSyncing(): Builder`
+
+Get the query for models that need re-embedding (sync process).
+
+**Returns:** Eloquent Builder instance
+
+### Configuration Methods
+
+#### `getConnectionName(): ?string`
+
+Get the database connection name for the model.
+
+**Returns:** Database connection name or null for default
+
+## Testing
+
+The package includes comprehensive tests. Run them with:
+
+```bash
+# Run all tests
+vendor/bin/pest
+
+# Run with coverage (requires Xdebug)
+vendor/bin/pest --coverage
+
+# Run static analysis
+vendor/bin/phpstan analyse
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for your changes
+5. Ensure all tests pass (`vendor/bin/pest`)
+6. Run static analysis (`vendor/bin/phpstan analyse`)
+7. Commit your changes (`git commit -m 'Add amazing feature'`)
+8. Push to the branch (`git push origin feature/amazing-feature`)
+9. Open a Pull Request
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+## Credits
+
+- [Subhendu Bhatta](https://github.com/thesubhendu)
+- Built with [Laravel](https://laravel.com)
+- Powered by [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings)
+- Uses [pgvector](https://github.com/pgvector/pgvector) for PostgreSQL vector operations
 
 

@@ -21,6 +21,6 @@ class Job extends Model implements EmbeddingSearchableContract
 
     public function toEmbeddingText(): string
     {
-        return $this->department;
+        return trim(($this->title ?? '') . ' ' . ($this->department ?? ''));
     }
 }

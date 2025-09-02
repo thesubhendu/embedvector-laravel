@@ -253,9 +253,9 @@ describe('End-to-End Integration Tests', function () {
             'title' => 'Senior Software Engineer',
         ]);
 
-        // Test the toEmbeddingText method - it should return the department
+        // Test the toEmbeddingText method - it should return the title and department
         $embeddingText = $complexJob->toEmbeddingText();
-        expect($embeddingText)->toBe('Engineering');
+        expect($embeddingText)->toBe('Senior Software Engineer Engineering');
 
         // Create embedding for this complex model
         $vector = new Vector(array_fill(0, 1536, 0.1));
@@ -496,7 +496,7 @@ describe('End-to-End Integration Tests', function () {
         foreach ($lines as $line) {
             $data = json_decode($line, true);
             expect($data)->toHaveKey('custom_id')
-                ->and($data['body']['input'])->toBe('Engineering');
+                ->and($data['body']['input'])->toContain('Engineering');
         }
 
         // Upload and create batch

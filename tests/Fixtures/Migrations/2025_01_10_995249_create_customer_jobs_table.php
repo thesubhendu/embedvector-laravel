@@ -23,7 +23,7 @@ return new class extends Migration
         //        if (!Schema::hasTable('jobs')) {
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
+            $table->string('title')->nullable();
             $table->string('department');
             $table->timestamps();
         });

@@ -223,11 +223,38 @@ trait EmbeddableTrait
      */
     public function getEmbedding(): Embedding
     {
-        $sourceEmbedding = $this->embedding;
+        // Check if we can use the relationship (same connection) or need cross-connection approach
+        $embeddingModel = new Embedding();
+        $canUseRelationship = $this->getConnectionName() === $embeddingModel->getConnectionName();
 
-        if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
-            $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
-            $sourceEmbedding = $this->embedding()->updateOrCreate([], ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
+        if ($canUseRelationship) {
+            // Use relationship for same-connection scenario
+            $sourceEmbedding = $this->embedding;
+
+            if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
+                $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
+                $sourceEmbedding = $this->embedding()->updateOrCreate([], ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
+            }
+        } else {
+            // Use direct query for cross-connection scenario
+            $sourceEmbedding = $embeddingModel->where('model_type', get_class($this))
+                ->where('model_id', $this->getKey())
+                ->first();
+
+            if (! $sourceEmbedding || $sourceEmbedding->embedding_sync_required) {
+                $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
+                
+                if ($sourceEmbedding) {
+                    $sourceEmbedding->update(['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
+                } else {
+                    $sourceEmbedding = $embeddingModel->create([
+                        'model_type' => get_class($this),
+                        'model_id' => $this->getKey(),
+                        'embedding' => $sourceEmbeddingVector,
+                        'embedding_sync_required' => false,
+                    ]);
+                }
+            }
         }
 
         return $sourceEmbedding;

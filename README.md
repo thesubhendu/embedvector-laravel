@@ -173,6 +173,10 @@ return [
         'output' => 'embeddings/output',
     ],
     'database_connection' => env('EMBEDVECTOR_DB_CONNECTION', 'pgsql'),
+    'model_fields_to_check' => [
+        // Configure fields to monitor for automatic sync
+        // 'App\Models\Job' => ['title', 'description', 'requirements'],
+    ],
 ];
 ```
 
@@ -190,6 +194,7 @@ return [
 - **`lot_size`**: Maximum items per OpenAI batch (up to 50,000)
 - **`chunk_size`**: Items processed per chunk during batch generation
 - **`database_connection`**: PostgreSQL connection for vector operations
+- **`model_fields_to_check`**: Configure fields to monitor for automatic sync with `FireSyncEmbeddingTrait`
 
 ### Batch Processing
 
@@ -373,6 +378,8 @@ $filtered = $allMatches->where('available', true);
 
 ### 3. Manage Embedding Sync
 
+#### Manual Sync Management
+
 ```php
 // Trigger re-embedding when relevant data changes
 class Job extends Model implements EmbeddingSearchableContract 
@@ -389,6 +396,41 @@ class Job extends Model implements EmbeddingSearchableContract
     }
 }
 ```
+
+#### Automatic Sync Management with FireSyncEmbeddingTrait
+
+For automatic embedding sync management, use the `FireSyncEmbeddingTrait`:
+
+```php
+use Subhendu\EmbedVector\Traits\FireSyncEmbeddingTrait;
+
+class Job extends Model implements EmbeddingSearchableContract 
+{
+    use EmbeddingSearchableTrait, FireSyncEmbeddingTrait;
+    
+    // No need for manual booted() method - trait handles it automatically
+}
+```
+
+Configure which fields to monitor in your `config/embedvector.php`:
+
+```php
+return [
+    // ... other config options
+    
+    'model_fields_to_check' => [
+        'App\Models\Job' => ['title', 'description', 'requirements'],
+        'App\Models\Product' => ['name', 'description', 'category'],
+        'App\Models\User' => ['name', 'bio', 'skills'],
+    ],
+];
+```
+
+**How it works:**
+- The trait automatically monitors specified fields for changes
+- When any monitored field changes, it marks the embedding for re-sync
+- Only triggers when fields actually change (compares old vs new values)
+- Respects the configuration mapping for each model class
 
 ## Troubleshooting
 
@@ -412,6 +454,11 @@ class Job extends Model implements EmbeddingSearchableContract
    - Use batch processing for large datasets
    - Consider using `optimized` search strategy for same-database scenarios
    - Add appropriate database indexes
+
+5. **Cross-connection relationship limitations**
+   - The `embedding()` relationship only works when both models use the same database connection
+   - For cross-connection setups (e.g., Jobs in MySQL, embeddings in PostgreSQL), the `getEmbedding()` method automatically handles this by bypassing the relationship
+   - Direct relationship access (`$model->embedding`) will return `null` in cross-connection scenarios - use `$model->getEmbedding()` instead
 
 ### Database Performance
 

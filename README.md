@@ -126,6 +126,11 @@ foreach ($matchingJobs as $job) {
 }
 ```
 
+**Note:** The `matchingResults()` method automatically uses `getOrCreateEmbedding()` internally, which means:
+- If no embedding exists for the source model, it will be created
+- If an embedding exists but needs sync (`embedding_sync_required = true`), it will be updated
+- This ensures you always get accurate similarity results
+
 #### Advanced Usage with Filters
 
 You can add query filters to narrow down the search results before embedding similarity is calculated:
@@ -346,6 +351,117 @@ $recommendations = $profile->matchingResults(
 );
 ```
 
+## Embedding Management Examples
+
+### Working with Embeddings
+
+```php
+$job = Job::find(1);
+
+// Check if an embedding exists without creating one
+$embedding = $job->getEmbedding();
+if ($embedding) {
+    echo "Embedding exists: " . ($embedding->embedding_sync_required ? "Needs sync" : "Up to date");
+} else {
+    echo "No embedding found";
+}
+
+// Get or create embedding (will create if missing or update if sync required)
+$embedding = $job->getOrCreateEmbedding();
+echo "Embedding ready with match percentage calculation";
+
+// Force create a fresh embedding (useful for testing or manual refresh)
+$freshEmbedding = $job->createFreshEmbedding();
+
+// Queue for syncing (mark for batch update later)
+$job->queueForSyncing();
+```
+
+### Batch Sync Workflow
+
+```php
+// 1. Mark multiple models for syncing
+$jobs = Job::where('updated_at', '>', now()->subDays(1))->get();
+foreach ($jobs as $job) {
+    $job->queueForSyncing(); // Queue each job for sync
+}
+
+// 2. Process all queued embeddings in batch
+php artisan embedding:gen "App\\Models\\Job" --type=sync
+
+// 3. Process the completed batch
+php artisan embedding:proc --all
+```
+
+### Conditional Embedding Updates
+
+```php
+class JobController extends Controller
+{
+    public function update(Request $request, Job $job)
+    {
+        $job->update($request->validated());
+        
+        // Only queue for syncing if embedding-relevant fields changed
+        if ($job->wasChanged(['title', 'description', 'requirements'])) {
+            $job->queueForSyncing();
+        }
+        
+        return response()->json($job);
+    }
+}
+```
+
+### Real-time vs Batch Embedding Strategy
+
+```php
+// Real-time embedding (immediate, good for single updates)
+$job = Job::create($data);
+$embedding = $job->getOrCreateEmbedding(); // Creates immediately
+
+// Batch embedding (efficient for bulk updates)
+$jobs = Job::factory()->count(100)->create();
+foreach ($jobs as $job) {
+    $job->queueForSyncing(); // Mark for batch processing
+}
+// Then run: php artisan embedding:gen "App\\Models\\Job" --type=sync
+```
+
+### Embedding Lifecycle Management
+
+```php
+// Scenario 1: New model creation
+$job = Job::create($data);
+// Option A: Create embedding immediately
+$embedding = $job->getOrCreateEmbedding();
+// Option B: Queue for batch processing (more efficient)
+$job->queueForSyncing();
+
+// Scenario 2: Model updates
+$job->update(['title' => 'Updated Title']);
+// Option A: Update embedding immediately
+$job->createFreshEmbedding();
+// Option B: Queue for batch processing (recommended)
+$job->queueForSyncing();
+
+// Scenario 3: Checking embedding status
+$embedding = $job->getEmbedding();
+if (!$embedding) {
+    echo "No embedding exists";
+} elseif ($embedding->embedding_sync_required) {
+    echo "Embedding needs update";
+} else {
+    echo "Embedding is up to date";
+}
+
+// Scenario 4: Bulk operations
+$jobs = Job::where('department', 'Engineering')->get();
+foreach ($jobs as $job) {
+    $job->queueForSyncing(); // Queue all for batch processing
+}
+// Process in batch: php artisan embedding:gen "App\\Models\\Job" --type=sync
+```
+
 ## Best Practices
 
 ### 1. Optimize Your `toEmbeddingText()` Method
@@ -376,12 +492,52 @@ $allMatches = $user->matchingResults(Product::class, 100);
 $filtered = $allMatches->where('available', true);
 ```
 
-### 3. Manage Embedding Sync
+### 3. Choose the Right Embedding Method
+
+Understanding when to use each embedding method:
+
+```php
+$job = Job::find(1);
+
+// ✅ Use getEmbedding() when you just want to check if embedding exists
+$embedding = $job->getEmbedding();
+if ($embedding && !$embedding->embedding_sync_required) {
+    // Use existing embedding
+}
+
+// ✅ Use getOrCreateEmbedding() for similarity matching (recommended)
+$matchingJobs = $customer->matchingResults(Job::class); // Uses getOrCreateEmbedding internally
+
+// ✅ Use createFreshEmbedding() when you want to force regeneration
+$job->update(['title' => 'New Title']);
+$freshEmbedding = $job->createFreshEmbedding(); // Immediate update
+
+// ✅ Use queueForSyncing() for deferred batch processing (most efficient)
+$job->update(['title' => 'New Title']);
+$job->queueForSyncing(); // Mark for later batch processing
+```
+
+### 4. Manage Embedding Sync
 
 #### Manual Sync Management
 
 ```php
-// Trigger re-embedding when relevant data changes
+// Method 1: Using queueForSyncing() (recommended)
+class Job extends Model implements EmbeddingSearchableContract 
+{
+    use EmbeddingSearchableTrait;
+    
+    protected static function booted()
+    {
+        static::updated(function ($job) {
+            if ($job->isDirty(['title', 'description', 'requirements'])) {
+                $job->queueForSyncing(); // Simpler and cleaner approach
+            }
+        });
+    }
+}
+
+// Method 2: Direct embedding update (legacy approach)
 class Job extends Model implements EmbeddingSearchableContract 
 {
     use EmbeddingSearchableTrait;
@@ -457,8 +613,13 @@ return [
 
 5. **Cross-connection relationship limitations**
    - The `embedding()` relationship only works when both models use the same database connection
-   - For cross-connection setups (e.g., Jobs in MySQL, embeddings in PostgreSQL), the `getEmbedding()` method automatically handles this by bypassing the relationship
-   - Direct relationship access (`$model->embedding`) will return `null` in cross-connection scenarios - use `$model->getEmbedding()` instead
+   - For cross-connection setups (e.g., Jobs in MySQL, embeddings in PostgreSQL), use `getEmbedding()` or `getOrCreateEmbedding()` methods instead of the relationship
+   - Direct relationship access (`$model->embedding`) will return `null` in cross-connection scenarios
+
+6. **Embedding method confusion**
+   - Use `getEmbedding()` when you only want to check if an embedding exists (returns null if not found)
+   - Use `getOrCreateEmbedding()` when you need an embedding for similarity matching (creates/updates as needed)
+   - Use `queueForSyncing()` to defer embedding updates for batch processing (most efficient for bulk updates)
 
 ### Database Performance
 
@@ -520,11 +681,29 @@ Find models similar to the current model.
 
 **Returns:** Collection of models with `match_percent` and `distance` properties
 
-#### `getEmbedding(): Embedding`
+#### `getEmbedding(): ?Embedding`
 
-Get or create the embedding for the current model.
+Get the existing embedding for the current model without creating a new one.
+
+**Returns:** Embedding model instance or null if no embedding exists
+
+#### `getOrCreateEmbedding(): Embedding`
+
+Get the existing embedding or create a new one if none exists. Also handles updating embeddings when `embedding_sync_required` is true.
 
 **Returns:** Embedding model instance
+
+#### `queueForSyncing(): void`
+
+Mark the model's embedding for re-generation on the next sync. This is useful when you want to defer embedding updates until a batch process runs.
+
+**Returns:** void
+
+#### `createFreshEmbedding(): Embedding`
+
+Force create a new embedding for the model, bypassing any existing embedding.
+
+**Returns:** Newly created Embedding model instance
 
 #### `embedding(): MorphOne`
 

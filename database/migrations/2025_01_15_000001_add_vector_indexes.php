@@ -30,16 +30,4 @@ return new class extends Migration
         });
     }
 
-    public function down(): void
-    {
-        $connection = $this->getConnection();
-
-        if (DB::connection($connection)->getDriverName() === 'pgsql') {
-            DB::connection($connection)->statement('DROP INDEX IF EXISTS embeddings_embedding_cosine_idx');
-        }
-
-        Schema::connection($connection)->table('embeddings', function (Blueprint $table) {
-            $table->dropIndex('embeddings_model_type_index');
-        });
-    }
 };

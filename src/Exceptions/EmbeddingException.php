@@ -35,4 +35,9 @@ class EmbeddingException extends Exception
     {
         return new self("Model class '{$modelClass}' must implement {$contract} interface.");
     }
+
+    public static function embeddingGenerationFailed($message = ''): self
+    {
+        return new self('Embedding generation failed: ' . $message);
+    }
 }

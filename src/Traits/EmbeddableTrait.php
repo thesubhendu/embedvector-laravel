@@ -33,7 +33,9 @@ trait EmbeddableTrait
             );
         }
 
-        $sourceEmbedding = $this->getEmbedding();
+        $sourceEmbedding = $this->getOrCreateEmbedding();
+       
+
 
         // Determine distance metric (default: cosine) and corresponding operator
         $distanceMetric = strtolower((string) config('embedvector.distance_metric', 'cosine')) === 'l2'
@@ -219,44 +221,64 @@ trait EmbeddableTrait
     /**
      * Get or create embedding for this model.
      *
+     * @return ?Embedding
+     */
+    public function getEmbedding(): ?Embedding
+    {
+        return Embedding::query()
+            ->where('model_type', get_class($this))
+            ->where('model_id', $this->getKey())
+            ->first();
+
+    }
+  
+    /**
+     * Get or create embedding for this model.
+     *
      * @return Embedding
      */
-    public function getEmbedding(): Embedding
+    public function getOrCreateEmbedding(): Embedding
     {
-        // Check if we can use the relationship (same connection) or need cross-connection approach
-        $embeddingModel = new Embedding();
-        $canUseRelationship = $this->getConnectionName() === $embeddingModel->getConnectionName();
+        $sourceEmbedding = Embedding::query()
+            ->where('model_type', get_class($this))
+            ->where('model_id', $this->getKey())
+            ->first();
 
-        if ($canUseRelationship) {
-            // Use relationship for same-connection scenario
-            $sourceEmbedding = $this->embedding;
-
-            if (! $sourceEmbedding || ($sourceEmbedding && $sourceEmbedding->embedding_sync_required)) {
-                $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
-                $sourceEmbedding = $this->embedding()->updateOrCreate([], ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
-            }
-        } else {
-            // Use direct query for cross-connection scenario
-            $sourceEmbedding = $embeddingModel->where('model_type', get_class($this))
-                ->where('model_id', $this->getKey())
-                ->first();
-
-            if (! $sourceEmbedding || $sourceEmbedding->embedding_sync_required) {
-                $sourceEmbeddingVector = app(EmbeddingService::class)->generateEmbedding($this->toEmbeddingText());
-                
-                if ($sourceEmbedding) {
-                    $sourceEmbedding->update(['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]);
-                } else {
-                    $sourceEmbedding = $embeddingModel->create([
-                        'model_type' => get_class($this),
-                        'model_id' => $this->getKey(),
-                        'embedding' => $sourceEmbeddingVector,
-                        'embedding_sync_required' => false,
-                    ]);
-                }
-            }
+        if (!$sourceEmbedding || $sourceEmbedding->embedding_sync_required) {
+            return $this->createFreshEmbedding();
         }
 
         return $sourceEmbedding;
     }
+
+    public function queueForSyncing(): void
+    {
+        $embedding = $this->getEmbedding();
+        
+        if ($embedding) {
+            $embedding->update(['embedding_sync_required' => true]);
+        }
+    }
+
+    public function createFreshEmbedding(): Embedding
+    {
+        try {
+            $sourceEmbeddingVector = app(EmbeddingService::class)
+                ->generateEmbedding($this->toEmbeddingText());
+
+            $sourceEmbedding = $this->embedding()->updateOrCreate(
+                [
+                    'model_type' => get_class($this),
+                    'model_id' => $this->getKey(),
+                ],
+                ['embedding' => $sourceEmbeddingVector, 'embedding_sync_required' => false]
+            );
+
+            return $sourceEmbedding;
+        } catch (\Exception $e) {
+            throw EmbeddingException::embeddingGenerationFailed($e->getMessage());
+        }
+    }
+
+    
 }

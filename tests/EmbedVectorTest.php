@@ -143,6 +143,175 @@ it('gives correct matching results', closure: function () {
         ->and($marketingResults->first()->id)->toBe($job2->id); // Should find the similar marketing job first
 });
 
+
+it('creates new embedding when none exists', function () {
+    // Mock OpenAI client to return a fake embedding
+    app()->bind(Client::class, fn () => new ClientFake([
+        \OpenAI\Responses\Embeddings\CreateResponse::fake([
+            'data' => [
+                [
+                    'embedding' => array_fill(0, 1536, 0.5), // Mock embedding vector
+                ],
+            ],
+        ]),
+    ]));
+
+    $job = Job::factory()->create(['title' => 'Software Engineer', 'department' => 'Engineering']);
+    
+    // Ensure no embedding exists initially
+    expect(Embedding::where('model_type', Job::class)->where('model_id', $job->id)->exists())->toBeFalse();
+    
+    // Test getEmbedding returns null when no embedding exists
+    expect($job->getEmbedding())->toBeNull();
+    
+    // Test getOrCreateEmbedding creates new embedding
+    $embedding = $job->getOrCreateEmbedding();
+    
+    expect($embedding)->toBeInstanceOf(Embedding::class)
+        ->and($embedding->model_type)->toBe(Job::class)
+        ->and($embedding->model_id)->toBe($job->id)
+        ->and($embedding->embedding_sync_required)->toBeFalse()
+        ->and($embedding->embedding)->toBeInstanceOf(Vector::class);
+    
+    // Verify embedding was saved to database
+    expect(Embedding::where('model_type', Job::class)->where('model_id', $job->id)->exists())->toBeTrue();
+});
+
+it('returns existing embedding when sync not required', function () {
+    $job = Job::factory()->create(['title' => 'Marketing Manager', 'department' => 'Marketing']);
+    
+    // Create existing embedding
+    $existingVector = new Vector(array_fill(0, 1536, 0.3));
+    $existingEmbedding = Embedding::create([
+        'model_type' => Job::class,
+        'model_id' => $job->id,
+        'embedding' => $existingVector,
+        'embedding_sync_required' => false,
+    ]);
+    
+    // Mock OpenAI client - should NOT be called since embedding exists and sync not required
+    $mockClient = new ClientFake([]);
+    app()->bind(Client::class, fn () => $mockClient);
+    
+    $embedding = $job->getEmbedding();
+    
+    expect($embedding->id)->toBe($existingEmbedding->id)
+        ->and($embedding->embedding)->toEqual($existingVector)
+        ->and($embedding->embedding_sync_required)->toBeFalse();
+    
+    // Verify no API calls were made
+    $mockClient->assertNothingSent();
+});
+
+it('updates embedding when sync is required', function () {
+    // Mock OpenAI client to return a new embedding
+    app()->bind(Client::class, fn () => new ClientFake([
+        \OpenAI\Responses\Embeddings\CreateResponse::fake([
+            'data' => [
+                [
+                    'embedding' => array_fill(0, 1536, 0.8), // New mock embedding vector
+                ],
+            ],
+        ]),
+    ]));
+
+    $job = Job::factory()->create(['title' => 'Data Scientist', 'department' => 'Engineering']);
+    
+    // Create existing embedding that requires sync
+    $oldVector = new Vector(array_fill(0, 1536, 0.1));
+    $existingEmbedding = Embedding::create([
+        'model_type' => Job::class,
+        'model_id' => $job->id,
+        'embedding' => $oldVector,
+        'embedding_sync_required' => true,
+    ]);
+    
+    // Test getEmbedding returns existing embedding without updating
+    $embedding = $job->getEmbedding();
+    expect($embedding->id)->toBe($existingEmbedding->id)
+        ->and($embedding->embedding_sync_required)->toBeTrue()
+        ->and($embedding->embedding)->toEqual($oldVector); // Should NOT be updated by getEmbedding
+    
+    // Test getOrCreateEmbedding updates when sync is required
+    $updatedEmbedding = $job->getOrCreateEmbedding();
+    expect($updatedEmbedding->embedding_sync_required)->toBeFalse()
+        ->and($updatedEmbedding->embedding)->not->toEqual($oldVector); // Should be updated
+    
+    // Verify the embedding was updated in the database
+    $freshEmbedding = $existingEmbedding->fresh();
+    expect($freshEmbedding->embedding_sync_required)->toBeFalse();
+});
+
+it('uses correct text for embedding generation', function () {
+    // Mock OpenAI client with multiple responses for multiple calls
+    $mockClient = new ClientFake([
+        \OpenAI\Responses\Embeddings\CreateResponse::fake([
+            'data' => [
+                [
+                    'embedding' => array_fill(0, 1536, 0.7),
+                ],
+            ],
+        ]),
+        \OpenAI\Responses\Embeddings\CreateResponse::fake([
+            'data' => [
+                [
+                    'embedding' => array_fill(0, 1536, 0.9),
+                ],
+            ],
+        ]),
+    ]);
+    
+    app()->bind(Client::class, fn () => $mockClient);
+    
+    $job = Job::factory()->create(['title' => 'Product Manager', 'department' => 'Product']);
+    $customer = Customer::factory()->create(['department' => 'Sales']);
+    
+    // Test Job embedding uses correct text format
+    $jobEmbedding = $job->getOrCreateEmbedding();
+    expect($jobEmbedding)->toBeInstanceOf(Embedding::class);
+    
+    // Test Customer embedding uses correct text format  
+    $customerEmbedding = $customer->getOrCreateEmbedding();
+    expect($customerEmbedding)->toBeInstanceOf(Embedding::class);
+    
+    // Verify API was called twice (once for each model)
+    $mockClient->assertSent(\OpenAI\Resources\Embeddings::class, 2);
+});
+
+it('queues embedding for syncing', function () {
+    $job = Job::factory()->create(['title' => 'Product Manager', 'department' => 'Product']);
+    
+    // Create existing embedding
+    $existingVector = new Vector(array_fill(0, 1536, 0.4));
+    $existingEmbedding = Embedding::create([
+        'model_type' => Job::class,
+        'model_id' => $job->id,
+        'embedding' => $existingVector,
+        'embedding_sync_required' => false,
+    ]);
+    
+    // Queue for syncing
+    $job->queueForSyncing();
+    
+    // Verify embedding_sync_required was set to true
+    $freshEmbedding = $existingEmbedding->fresh();
+    expect($freshEmbedding->embedding_sync_required)->toBeTrue();
+});
+
+it('handles queueForSyncing when no embedding exists', function () {
+    $job = Job::factory()->create(['title' => 'Product Manager', 'department' => 'Product']);
+    
+    // Ensure no embedding exists
+    expect(Embedding::where('model_type', Job::class)->where('model_id', $job->id)->exists())->toBeFalse();
+    
+    // Queue for syncing should not throw an error
+    $job->queueForSyncing();
+    
+    // Still no embedding should exist
+    expect(Embedding::where('model_type', Job::class)->where('model_id', $job->id)->exists())->toBeFalse();
+});
+
+
 function padVector(array $vector, int $targetDimensions = 1536): array
 {
     return array_pad($vector, $targetDimensions, 0.0);
